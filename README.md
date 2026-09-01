@@ -83,13 +83,16 @@ Images are downscaled only (never upscaled), preserving aspect ratio to fit with
 See [config.example.yaml](config.example.yaml). Key fields:
 
 
-| Field                                | Description                                      |
-| ------------------------------------ | ------------------------------------------------ |
-| `sources.root`                       | Root folder containing portrait group subfolders |
-| `categories`                         | Category subfolder names (`M`, `L`, `r`)         |
-| `destinations[].format`              | Output format: `bmp` (24-bit RGB) or `webp`      |
-| `destinations[].mappings`            | Per-category max width/height (downscale fit)    |
-| `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/`   |
+| Field                                | Description                                                         |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `sources.root`                       | Root folder containing portrait group subfolders                    |
+| `categories`                         | Category subfolder names (`M`, `L`, `r`)                            |
+| `destinations[].format`              | Output format: `bmp` (24-bit RGB) or `webp`                         |
+| `destinations[].mappings`            | Per-category max width/height; omit categories to skip them         |
+| `destinations[].prefixes`            | Optional; maps source stem → prefix for output sort order           |
+| `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/`                      |
+
+Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodbdimoenL.webp`).
 
 
 

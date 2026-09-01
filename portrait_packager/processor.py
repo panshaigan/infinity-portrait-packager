@@ -47,7 +47,8 @@ def _process_image(
     result: ProcessResult,
 ) -> None:
     mapping = destination.mappings[category]
-    out_name = output_name(source_path.stem, category, destination.format)
+    prefix = destination.prefixes.get(source_path.stem, "")
+    out_name = output_name(source_path.stem, category, destination.format, prefix)
     out_path = dest_dir / out_name
 
     try:
@@ -126,6 +127,11 @@ def process_group(
             print(f"{label} -> {dest_dir} ({destination.format})")
 
         for category in config.categories:
+            if category not in destination.mappings:
+                if verbose:
+                    print(f"{label} {category}: skipped (no mapping configured)")
+                continue
+
             category_dir = source_group / category
             if not category_dir.is_dir():
                 warning = f"{label} category '{category}' not found, skipping"

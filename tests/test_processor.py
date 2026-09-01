@@ -111,3 +111,61 @@ def test_dest_filter(tmp_path: Path) -> None:
     assert result.files_written == 2
     assert (config.destinations[0].path / group).exists()
     assert not (config.destinations[1].path / group).exists()
+
+
+def test_skips_unmapped_categories(tmp_path: Path) -> None:
+    config, group = build_fixture(tmp_path)
+    # web_preview only maps L in this test config
+    config_data = {
+        "sources": {"root": str(config.sources_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "l_only",
+                "path": str(tmp_path / "out" / "lonly"),
+                "format": "bmp",
+                "mappings": {"L": {"width": 420, "height": 660}},
+            }
+        ],
+    }
+    write_config(tmp_path / "lonly.yaml", config_data)
+    lonly_config = load_config(tmp_path / "lonly.yaml")
+
+    result = process_group(lonly_config, group)
+
+    assert result.ok
+    assert result.files_written == 1
+    dest = lonly_config.destinations[0].path / group
+    assert (dest / "portrait001L.bmp").is_file()
+    assert not (dest / "portrait001M.bmp").exists()
+
+
+def test_applies_filename_prefix(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(source_root / group / "L" / "bdimoen.png")
+    make_test_image(source_root / group / "L" / "bdmain.png")
+
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "prefixed",
+                "path": str(tmp_path / "out"),
+                "format": "bmp",
+                "mappings": {"L": {"width": 420, "height": 660}},
+                "prefixes": {"bdimoen": "sod", "bddorn": "sod"},
+            }
+        ],
+    }
+    write_config(tmp_path / "prefix.yaml", config_data)
+    prefix_config = load_config(tmp_path / "prefix.yaml")
+
+    result = process_group(prefix_config, group)
+
+    assert result.ok
+    assert result.files_written == 2
+    dest = prefix_config.destinations[0].path / group
+    assert (dest / "sodbdimoenL.bmp").is_file()
+    assert (dest / "bdmainL.bmp").is_file()

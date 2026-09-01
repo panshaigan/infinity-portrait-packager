@@ -45,13 +45,55 @@ def test_load_valid_config(tmp_path: Path) -> None:
     assert config.destinations[0].mappings["L"].width == 420
 
 
-def test_missing_mapping_for_category(tmp_path: Path) -> None:
+def test_partial_mappings_allowed(tmp_path: Path) -> None:
     data = minimal_config()
     del data["destinations"][0]["mappings"]["r"]
     config_path = tmp_path / "config.yaml"
     write_config(config_path, data)
 
-    with pytest.raises(ConfigError, match="missing mapping for category 'r'"):
+    config = load_config(config_path)
+
+    assert set(config.destinations[0].mappings) == {"M", "L"}
+
+
+def test_empty_mappings_rejected(tmp_path: Path) -> None:
+    data = minimal_config()
+    data["destinations"][0]["mappings"] = {}
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, data)
+
+    with pytest.raises(ConfigError, match="mappings must be a non-empty object"):
+        load_config(config_path)
+
+
+def test_unknown_mapping_category(tmp_path: Path) -> None:
+    data = minimal_config()
+    data["destinations"][0]["mappings"]["X"] = {"width": 100, "height": 100}
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, data)
+
+    with pytest.raises(ConfigError, match="unknown mapping category 'X'"):
+        load_config(config_path)
+
+
+def test_prefixes_parsed(tmp_path: Path) -> None:
+    data = minimal_config()
+    data["destinations"][0]["prefixes"] = {"bdimoen": "sod", "bddorn": "sod"}
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, data)
+
+    config = load_config(config_path)
+
+    assert config.destinations[0].prefixes == {"bdimoen": "sod", "bddorn": "sod"}
+
+
+def test_prefixes_reject_empty_value(tmp_path: Path) -> None:
+    data = minimal_config()
+    data["destinations"][0]["prefixes"] = {"bdimoen": ""}
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, data)
+
+    with pytest.raises(ConfigError, match="prefix value must be a non-empty string"):
         load_config(config_path)
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,7 @@ class Destination:
     mappings: dict[str, SizeMapping]
     webp_quality: int = 85
     thumbnails: ThumbnailConfig | None = None
+    prefixes: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,23 @@ def _parse_thumbnail(data: Any, context: str) -> ThumbnailConfig:
     return ThumbnailConfig(max_size=max_size)
 
 
+def _parse_prefixes(data: Any, context: str) -> dict[str, str]:
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ConfigError(f"{context}: prefixes must be an object")
+    prefixes: dict[str, str] = {}
+    for key, value in data.items():
+        if not isinstance(key, str) or not key:
+            raise ConfigError(f"{context}.prefixes: keys must be non-empty strings")
+        if not isinstance(value, str) or not value:
+            raise ConfigError(
+                f"{context}.prefixes.{key}: prefix value must be a non-empty string"
+            )
+        prefixes[key] = value
+    return prefixes
+
+
 def _parse_destination(data: Any, categories: list[str], index: int) -> Destination:
     context = f"destinations[{index}]"
     if not isinstance(data, dict):
@@ -99,21 +117,15 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
         )
 
     mappings_raw = _require_mapping(data, "mappings", context)
-    if not isinstance(mappings_raw, dict):
-        raise ConfigError(f"{context}: mappings must be an object")
+    if not isinstance(mappings_raw, dict) or not mappings_raw:
+        raise ConfigError(f"{context}: mappings must be a non-empty object")
 
     mappings: dict[str, SizeMapping] = {}
-    for category in categories:
-        if category not in mappings_raw:
-            raise ConfigError(f"{context}: missing mapping for category '{category}'")
+    for category, mapping_data in mappings_raw.items():
+        if category not in categories:
+            raise ConfigError(f"{context}: unknown mapping category '{category}'")
         mappings[category] = _parse_size_mapping(
-            mappings_raw[category], f"{context}.mappings.{category}"
-        )
-
-    extra_categories = set(mappings_raw) - set(categories)
-    if extra_categories:
-        raise ConfigError(
-            f"{context}: unknown mapping categories: {', '.join(sorted(extra_categories))}"
+            mapping_data, f"{context}.mappings.{category}"
         )
 
     webp_quality = 85
@@ -129,6 +141,11 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
     if "thumbnails" in data and data["thumbnails"] is not None:
         thumbnails = _parse_thumbnail(data["thumbnails"], f"{context}.thumbnails")
 
+    prefixes = _parse_prefixes(
+        data.get("prefixes"),
+        context,
+    )
+
     return Destination(
         id=dest_id,
         path=Path(path_raw),
@@ -136,6 +153,7 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
         mappings=mappings,
         webp_quality=webp_quality,
         thumbnails=thumbnails,
+        prefixes=prefixes,
     )
 
 

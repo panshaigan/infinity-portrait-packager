@@ -10,6 +10,11 @@ def test_output_name() -> None:
     assert output_name("portrait001", "r", "webp") == "portrait001r.webp"
 
 
+def test_output_name_with_prefix() -> None:
+    assert output_name("bdimoen", "L", "webp", "sod") == "sodbdimoenL.webp"
+    assert output_name("bdmain", "M", "bmp", "") == "bdmainM.bmp"
+
+
 def test_resize_fit_downscales_large_image() -> None:
     image = Image.new("RGB", (840, 1320), color="red")
     result = resize_fit(image, 420, 660)

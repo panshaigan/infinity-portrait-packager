@@ -6,7 +6,7 @@ categories: ["M", "L", "r"]
 
 destinations:
   - id: game_bmp
-    path: "processed"
+    path: "processed/game_bmp"
     #path: "../dev/BG1StylePortraits/BG1StylePortraits/portraits/"
     format: bmp
     mappings:
@@ -15,7 +15,7 @@ destinations:
       r: { width: 420, height: 660 }
 
   - id: web_preview
-    path: "promotion"
+    path: "processed/promotion"
     #path: "../dev/BG1StylePortraits/docs/portraits/"
     format: webp
     webp_quality: 85
@@ -25,3 +25,18 @@ destinations:
       r: { width: 420, height: 660 }
     thumbnails:
       max_size: 165
+
+  - id: promo_compilation
+    path: "processed/compilation"
+    format: webp
+    webp_quality: 85
+    mappings:
+      L: { width: 420, height: 660 }
+    prefixes:
+      bdimoen: z_sod_
+      bdivicon: z_sod_
+      caelar: z_sod_
+      glint: z_sod_
+      mkhiin: z_sod_
+      schael: z_sod_
+      voghiln: z_sod_

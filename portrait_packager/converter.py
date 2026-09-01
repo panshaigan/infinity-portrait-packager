@@ -8,9 +8,9 @@ SUPPORTED_INPUT_EXTENSIONS = frozenset({".png", ".bmp", ".webp", ".jpg", ".jpeg"
 FORMAT_EXTENSIONS = {"bmp": ".bmp", "webp": ".webp"}
 
 
-def output_name(stem: str, category: str, dest_format: str) -> str:
+def output_name(stem: str, category: str, dest_format: str, prefix: str = "") -> str:
     ext = FORMAT_EXTENSIONS[dest_format]
-    return f"{stem}{category}{ext}"
+    return f"{prefix}{stem}{category}{ext}"
 
 
 def resize_fit(image: Image.Image, width: int, height: int) -> Image.Image:

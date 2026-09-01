@@ -19,7 +19,7 @@ def resolve_default_config() -> Path:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="portrait-packager",
+        prog="ppackage",
         description="Convert portrait groups for distribution and promotion.",
     )
     parser.add_argument(

@@ -9,17 +9,24 @@ A command-line tool for preparing Baldur's Gate / Infinity Engine portrait packs
 
 ## Quick start
 
-### 1. Configuration
+### 1. Download and unpack
 
-Copy the example config and edit paths and mappings:
+Download the zip for your platform from [Releases](https://github.com/panshaigan/infinity-portrait-packager/releases) and unzip it. The package contains:
+
+- `ppackage` (or `ppackage.exe` on Windows) — the CLI binary
+- `config.yaml` — ready-to-use configuration; edit paths if needed
+
+### 2. Configuration
+
+Edit `config.yaml` in the unpacked folder if your source/destination paths differ from the defaults. The config must sit next to the executable (or pass `--config` explicitly).
+
+When running from source, copy the example config first:
 
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-Place `config.yaml` next to the executable, or in the current working directory when running from source.
-
-### 2. Source folder layout
+### 3. Source folder layout
 
 ```
 sources/
@@ -34,24 +41,22 @@ sources/
     ...
 ```
 
+### 4. Run
 
-
-### 3. Run
-
-**Windows (release binary):**
+**Windows (release package):**
 
 ```powershell
-portrait-packager.exe party_bg1
-portrait-packager.exe party_bg1 --config D:\path\config.yaml
-portrait-packager.exe party_bg1 --dest game_bmp --dry-run --verbose
+ppackage.exe party_bg1
+ppackage.exe party_bg1 --config D:\path\config.yaml
+ppackage.exe party_bg1 --dest game_bmp --dry-run --verbose
 ```
 
-**Linux (release binary):**
+**Linux (release package):**
 
 ```bash
-chmod +x portrait-packager-linux-x86_64
-./portrait-packager-linux-x86_64 party_bg1
-./portrait-packager-linux-x86_64 party_bg1 --config /path/to/config.yaml
+chmod +x ppackage
+./ppackage party_bg1
+./ppackage party_bg1 --config /path/to/config.yaml
 ```
 
 **From source (Windows or Linux):**
@@ -100,7 +105,7 @@ Build a standalone binary locally:
 
 ```bash
 pyinstaller portrait-packager.spec
-# Output: dist/portrait-packager.exe (Windows) or dist/portrait-packager (Linux)
+# Output: dist/ppackage.exe (Windows) or dist/ppackage (Linux)
 ```
 
 
@@ -118,11 +123,10 @@ git push origin v1.0.0
 
 If Actions did not run, check **Settings → Actions → General** and ensure Actions are enabled for the repository. You can also run the **Release** workflow manually from the Actions tab (enter the tag, e.g. `v1.0.0`).
 
-Release assets:
+Release assets (one zip per platform):
 
-- `portrait-packager-windows-x86_64.exe`
-- `portrait-packager-linux-x86_64`
-- `config.example.yaml`
+- `portrait-packager-windows-x86_64.zip` — `ppackage.exe` + `config.yaml`
+- `portrait-packager-linux-x86_64.zip` — `ppackage` + `config.yaml`
 
 
 

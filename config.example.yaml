@@ -1,0 +1,27 @@
+# Paths work on both Windows and Linux (forward slashes recommended)
+sources:
+  root: "/data/portraits/source"
+
+categories: ["M", "L", "r"]
+
+destinations:
+  - id: game_bmp
+    path: "/data/portraits/out/game"
+    format: bmp
+    mappings:
+      M: { width: 210, height: 330 }
+      L: { width: 420, height: 660 }
+      r: { width: 84, height: 132 }
+    thumbnails:
+      max_size: 105
+
+  - id: web_preview
+    path: "/data/portraits/out/web"
+    format: webp
+    webp_quality: 85
+    mappings:
+      M: { width: 105, height: 165 }
+      L: { width: 210, height: 330 }
+      r: { width: 42, height: 66 }
+    thumbnails:
+      max_size: 165

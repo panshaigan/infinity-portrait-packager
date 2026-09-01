@@ -155,7 +155,7 @@ def test_applies_filename_prefix(tmp_path: Path) -> None:
                 "path": str(tmp_path / "out"),
                 "format": "bmp",
                 "mappings": {"L": {"width": 420, "height": 660}},
-                "prefixes": {"bdimoen": "sod", "bddorn": "sod"},
+                "prefixes": {"bdimoen": "z_sod_"},
             }
         ],
     }
@@ -167,5 +167,5 @@ def test_applies_filename_prefix(tmp_path: Path) -> None:
     assert result.ok
     assert result.files_written == 2
     dest = prefix_config.destinations[0].path / group
-    assert (dest / "sodbdimoenL.bmp").is_file()
+    assert (dest / "z_sod_bdimoenL.bmp").is_file()
     assert (dest / "bdmainL.bmp").is_file()

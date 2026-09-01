@@ -8,8 +8,10 @@ from PIL import Image, UnidentifiedImageError
 from portrait_packager.config import Config, Destination
 from portrait_packager.converter import (
     SUPPORTED_INPUT_EXTENSIONS,
+    lookup_prefix,
     output_name,
-    resize_fit,
+    resize_exact,
+    resize_max_side,
     save_image,
 )
 
@@ -47,19 +49,23 @@ def _process_image(
     result: ProcessResult,
 ) -> None:
     mapping = destination.mappings[category]
-    prefix = destination.prefixes.get(source_path.stem, "")
+    prefix = lookup_prefix(destination.prefixes, source_path.stem)
     out_name = output_name(source_path.stem, category, destination.format, prefix)
     out_path = dest_dir / out_name
 
     try:
         with Image.open(source_path) as image:
-            main_image = resize_fit(image, mapping.width, mapping.height)
+            main_image = resize_exact(image, mapping.width, mapping.height)
     except (UnidentifiedImageError, OSError) as exc:
         result.errors.append(f"Failed to read {source_path}: {exc}")
         return
 
     if verbose:
-        print(f"  {source_path.name} -> {out_name} ({main_image.width}x{main_image.height})")
+        prefix_note = f" [prefix: {prefix!r}]" if prefix else ""
+        print(
+            f"  {source_path.name} -> {out_name} "
+            f"({main_image.width}x{main_image.height}){prefix_note}"
+        )
 
     if not dry_run:
         try:
@@ -74,9 +80,8 @@ def _process_image(
         return
 
     thumb_path = thumbs_dir / out_name
-    thumb_image = resize_fit(
+    thumb_image = resize_max_side(
         main_image,
-        destination.thumbnails.max_size,
         destination.thumbnails.max_size,
     )
 

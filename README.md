@@ -76,7 +76,7 @@ For each destination, all categories are written into a subfolder named after th
 
 When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` with the same filename and destination format.
 
-Images are downscaled only (never upscaled), preserving aspect ratio to fit within the configured box.
+Images are resized to the exact configured width and height for each category mapping.
 
 ## Config reference
 
@@ -88,7 +88,7 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | `sources.root`                       | Root folder containing portrait group subfolders                    |
 | `categories`                         | Category subfolder names (`M`, `L`, `r`)                            |
 | `destinations[].format`              | Output format: `bmp` (24-bit RGB) or `webp`                         |
-| `destinations[].mappings`            | Per-category max width/height; omit categories to skip them         |
+| `destinations[].mappings`            | Per-category exact output width/height; omit categories to skip them |
 | `destinations[].prefixes`            | Optional; maps source stem → prefix for output sort order           |
 | `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/`                      |
 
@@ -101,8 +101,26 @@ Each destination may define mappings for only some categories — unconfigured c
 
 ```bash
 pip install -r requirements-dev.txt
-pytest
+python -m pytest
 ```
+
+### Run locally without building an exe
+
+From the project root, with your config beside you or passed explicitly:
+
+```bash
+pip install -r requirements.txt
+cp config.example.yaml config.yaml   # first time only; edit paths
+python -m portrait_packager party_bg1 --config config.yaml --verbose
+```
+
+Useful flags while iterating:
+
+```bash
+python -m portrait_packager party_bg1 --dest promo_compilation --dry-run --verbose
+```
+
+`--dry-run` shows what would be written; `--verbose` prints each source file and output name (check prefix matching there).
 
 Build a standalone binary locally:
 

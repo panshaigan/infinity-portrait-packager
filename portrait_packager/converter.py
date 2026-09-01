@@ -13,9 +13,25 @@ def output_name(stem: str, category: str, dest_format: str, prefix: str = "") ->
     return f"{prefix}{stem}{category}{ext}"
 
 
-def resize_fit(image: Image.Image, width: int, height: int) -> Image.Image:
+def lookup_prefix(prefixes: dict[str, str], stem: str) -> str:
+    if stem in prefixes:
+        return prefixes[stem]
+    stem_lower = stem.lower()
+    for key, value in prefixes.items():
+        if key.lower() == stem_lower:
+            return value
+    return ""
+
+
+def resize_exact(image: Image.Image, width: int, height: int) -> Image.Image:
+    if image.size == (width, height):
+        return image.copy()
+    return image.resize((width, height), Image.Resampling.LANCZOS)
+
+
+def resize_max_side(image: Image.Image, max_size: int) -> Image.Image:
     resized = image.copy()
-    resized.thumbnail((width, height), Image.Resampling.LANCZOS)
+    resized.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
     return resized
 
 

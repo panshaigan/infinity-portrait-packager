@@ -23,7 +23,7 @@ def build_fixture(tmp_path: Path) -> tuple[Config, str]:
 
     make_test_image(group_dir / "M" / "portrait001.png")
     make_test_image(group_dir / "L" / "portrait001.png")
-  # category r intentionally missing
+    # category r intentionally missing
 
     dest_bmp = tmp_path / "out" / "game"
     dest_webp = tmp_path / "out" / "web"
@@ -71,13 +71,13 @@ def test_process_group_writes_outputs(tmp_path: Path) -> None:
     assert result.thumbs_written == 2
     assert len(result.warnings) == 2
 
-    bmp_dest = config.destinations[0].path
+    bmp_dest = config.destinations[0].path / group
     assert (bmp_dest / "portrait001M.bmp").is_file()
     assert (bmp_dest / "portrait001L.bmp").is_file()
     assert (bmp_dest / "thumbs" / "portrait001M.bmp").is_file()
     assert (bmp_dest / "thumbs" / "portrait001L.bmp").is_file()
 
-    webp_dest = config.destinations[1].path
+    webp_dest = config.destinations[1].path / group
     assert (webp_dest / "portrait001M.webp").is_file()
     assert (webp_dest / "portrait001L.webp").is_file()
     assert not (webp_dest / "thumbs").exists()
@@ -109,5 +109,5 @@ def test_dest_filter(tmp_path: Path) -> None:
 
     assert result.ok
     assert result.files_written == 2
-    assert config.destinations[0].path.exists()
-    assert not config.destinations[1].path.exists()
+    assert (config.destinations[0].path / group).exists()
+    assert not (config.destinations[1].path / group).exists()

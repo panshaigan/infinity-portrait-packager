@@ -1,6 +1,6 @@
 # Infinity Portrait Packager
 
-A command-line tool for preparing Baldur's Gate / Infinity Engine portrait packs. Point it at a portrait group (e.g. `party_bg1`), and it downscales and converts `M`, `L`, and `r` category images into flat destination folders — with optional thumbnails — for game distribution or web promotion. Windows and Linux binaries available.
+A command-line tool for preparing Baldur's Gate / Infinity Engine portrait packs. Point it at a portrait group (e.g. `party_bg1`), and it downscales and converts `M`, `L`, and `r` category images into per-group destination subfolders — with optional thumbnails — for game distribution or web promotion. Windows and Linux binaries available.
 
 ## Requirements
 
@@ -65,11 +65,11 @@ python -m portrait_packager party_bg1
 
 ## Output
 
-For each destination, all categories are written flat into the destination path. Filenames keep the original stem with the category appended (no separator):
+For each destination, all categories are written into a subfolder named after the portrait group (e.g. `party_bg1/`). Filenames keep the original stem with the category appended (no separator):
 
-- `party_bg1/L/portrait001.png` → `{dest}/portrait001L.bmp`
+- `party_bg1/L/portrait001.png` → `{dest}/party_bg1/portrait001L.bmp`
 
-When thumbnails are configured, they are written to `{dest}/thumbs/` with the same filename and destination format.
+When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` with the same filename and destination format.
 
 Images are downscaled only (never upscaled), preserving aspect ratio to fit within the configured box.
 

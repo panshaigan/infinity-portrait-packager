@@ -113,7 +113,7 @@ def process_group(
 
     for destination in destinations:
         dest_counts: dict[str, int] = {}
-        dest_dir = destination.path
+        dest_dir = destination.path / group
         thumbs_dir = dest_dir / "thumbs" if destination.thumbnails else None
 
         if not dry_run:
@@ -123,7 +123,7 @@ def process_group(
 
         label = f"[{destination.id}]"
         if verbose or dry_run:
-            print(f"{label} -> {destination.path} ({destination.format})")
+            print(f"{label} -> {dest_dir} ({destination.format})")
 
         for category in config.categories:
             category_dir = source_group / category

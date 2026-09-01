@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish assets to (e.g. v1.0.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -26,7 +32,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest
+        run: python -m pytest
 
   build:
     needs: test
@@ -52,7 +58,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Build binary
-        run: pyinstaller portrait-packager.spec
+        run: python -m PyInstaller portrait-packager.spec
 
       - name: Prepare release asset
         shell: bash
@@ -87,6 +93,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.inputs.tag }}
           files: |
             release-assets/portrait-packager-windows-x86_64.exe
             release-assets/portrait-packager-linux-x86_64

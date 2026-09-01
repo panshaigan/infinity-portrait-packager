@@ -104,6 +104,10 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
+**Important:** Push the tag from git (`git push origin v1.0.0`). Creating a release only through the GitHub web UI may not trigger the workflow if Actions was not yet enabled.
+
+If Actions did not run, check **Settings → Actions → General** and ensure Actions are enabled for the repository. You can also run the **Release** workflow manually from the Actions tab (enter the tag, e.g. `v1.0.0`).
+
 Release assets:
 
 - `portrait-packager-windows-x86_64.exe`

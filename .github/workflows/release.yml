@@ -61,14 +61,10 @@ jobs:
         run: python -m PyInstaller portrait-packager.spec
 
       - name: Package release zip
-        shell: bash
-        run: |
-          mkdir -p release-staging/package
-          cp "dist/${{ matrix.binary_name }}" "release-staging/package/${{ matrix.binary_name }}"
-          cp config.example.yaml release-staging/package/config.yaml
-          chmod +x "release-staging/package/${{ matrix.binary_name }}"
-          cd release-staging/package
-          zip -r "../${{ matrix.zip_name }}" .
+        run: >
+          python scripts/package_release.py
+          --binary-name ${{ matrix.binary_name }}
+          --zip-name ${{ matrix.zip_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -1,6 +1,6 @@
 # Infinity Portrait Packager
 
-Prepare portrait files for distribution and promotion. Converts portrait groups from a source folder tree into flat destination folders with configurable formats, resolutions, and thumbnails.
+A command-line tool for preparing Baldur's Gate / Infinity Engine portrait packs. Point it at a portrait group (e.g. `party_bg1`), and it downscales and converts `M`, `L`, and `r` category images into flat destination folders — with optional thumbnails — for game distribution or web promotion. Windows and Linux binaries available.
 
 ## Requirements
 
@@ -34,6 +34,8 @@ sources/
     ...
 ```
 
+
+
 ### 3. Run
 
 **Windows (release binary):**
@@ -59,6 +61,8 @@ pip install -r requirements.txt
 python -m portrait_packager party_bg1
 ```
 
+
+
 ## Output
 
 For each destination, all categories are written flat into the destination path. Filenames keep the original stem with the category appended (no separator):
@@ -73,13 +77,17 @@ Images are downscaled only (never upscaled), preserving aspect ratio to fit with
 
 See [config.example.yaml](config.example.yaml). Key fields:
 
-| Field | Description |
-|-------|-------------|
-| `sources.root` | Root folder containing portrait group subfolders |
-| `categories` | Category subfolder names (`M`, `L`, `r`) |
-| `destinations[].format` | Output format: `bmp` (24-bit RGB) or `webp` |
-| `destinations[].mappings` | Per-category max width/height (downscale fit) |
-| `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/` |
+
+| Field                                | Description                                      |
+| ------------------------------------ | ------------------------------------------------ |
+| `sources.root`                       | Root folder containing portrait group subfolders |
+| `categories`                         | Category subfolder names (`M`, `L`, `r`)         |
+| `destinations[].format`              | Output format: `bmp` (24-bit RGB) or `webp`      |
+| `destinations[].mappings`            | Per-category max width/height (downscale fit)    |
+| `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/`   |
+
+
+
 
 ## Development
 
@@ -94,6 +102,8 @@ Build a standalone binary locally:
 pyinstaller portrait-packager.spec
 # Output: dist/portrait-packager.exe (Windows) or dist/portrait-packager (Linux)
 ```
+
+
 
 ## Releases
 
@@ -114,11 +124,16 @@ Release assets:
 - `portrait-packager-linux-x86_64`
 - `config.example.yaml`
 
+
+
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Portrait group not found |
-| 2 | Config error |
-| 3 | Processing error |
+
+| Code | Meaning                  |
+| ---- | ------------------------ |
+| 0    | Success                  |
+| 1    | Portrait group not found |
+| 2    | Config error             |
+| 3    | Processing error         |
+
+

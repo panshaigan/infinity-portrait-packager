@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
-from portrait_packager.config import load_config
+from portrait_packager.config import Config, load_config
 from portrait_packager.processor import process_group
 
 

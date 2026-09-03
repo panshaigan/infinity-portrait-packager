@@ -38,6 +38,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Process only the destination with this id",
     )
     parser.add_argument(
+        "--cols",
+        type=int,
+        default=None,
+        help="Override contact sheet column count for this group",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show what would be converted without writing files",
@@ -67,6 +73,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Config error: {exc}", file=sys.stderr)
         return 2
 
+    if args.cols is not None and args.cols <= 0:
+        print("Config error: --cols must be a positive integer", file=sys.stderr)
+        return 2
+
     mode = " (dry run)" if args.dry_run else ""
     print(f"Processing: {args.group}{mode}")
 
@@ -74,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         config,
         args.group,
         dest_filter=args.dest_filter,
+        cols_override=args.cols,
         dry_run=args.dry_run,
         verbose=args.verbose,
     )

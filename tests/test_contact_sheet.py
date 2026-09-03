@@ -31,7 +31,7 @@ def test_contact_sheet_config_parsed(tmp_path: Path) -> None:
                 "contact_sheet": {
                     "width": 1200,
                     "thumb_width": 800,
-                    "cols": 9,
+                    "cols": {"party_bg1": 9},
                     "path": "/tmp/out/sheets",
                 },
             }
@@ -46,7 +46,7 @@ def test_contact_sheet_config_parsed(tmp_path: Path) -> None:
     assert sheet is not None
     assert sheet.width == 1200
     assert sheet.thumb_width == 800
-    assert sheet.cols == 9
+    assert sheet.cols == {"party_bg1": 9}
     assert sheet.path == Path("/tmp/out/sheets")
 
 
@@ -60,7 +60,7 @@ def test_contact_sheet_config_rejects_missing_fields(tmp_path: Path) -> None:
                 "path": "/tmp/out/web",
                 "format": "webp",
                 "mappings": {"L": {"width": 100, "height": 200}},
-                "contact_sheet": {"width": 1200, "cols": 9},
+                "contact_sheet": {"width": 1200, "path": "/tmp/out/sheets"},
             }
         ],
     }
@@ -121,7 +121,7 @@ def test_process_group_writes_contact_sheets(tmp_path: Path) -> None:
                 "contact_sheet": {
                     "width": 120,
                     "thumb_width": 80,
-                    "cols": 2,
+                    "cols": {"party_bg1": 2},
                     "path": str(sheet_dir),
                 },
             }
@@ -151,3 +151,78 @@ def test_process_group_writes_contact_sheets(tmp_path: Path) -> None:
         assert image.width == 120
     with Image.open(thumb_m) as image:
         assert image.width == 80
+
+
+def test_contact_sheet_missing_group_cols(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(source_root / group / "L" / "portrait001.png", (840, 1320), "red")
+
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["L"],
+        "destinations": [
+            {
+                "id": "web_preview",
+                "path": str(tmp_path / "out" / "web"),
+                "format": "webp",
+                "mappings": {"L": {"width": 42, "height": 66}},
+                "contact_sheet": {
+                    "width": 120,
+                    "thumb_width": 80,
+                    "cols": {"party_bg2": 6},
+                    "path": str(tmp_path / "out" / "sheets"),
+                },
+            }
+        ],
+    }
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, config_data)
+    config = load_config(config_path)
+
+    result = process_group(config, group)
+
+    assert not result.ok
+    assert any("no entry for group 'party_bg1'" in error for error in result.errors)
+
+
+def test_cols_override(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    group_dir = source_root / group
+    for index in range(3):
+        make_test_image(
+            group_dir / "L" / f"portrait{index:03d}.png",
+            (840, 1320),
+            "red",
+        )
+
+    sheet_dir = tmp_path / "out" / "sheets"
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["L"],
+        "destinations": [
+            {
+                "id": "web_preview",
+                "path": str(tmp_path / "out" / "web"),
+                "format": "webp",
+                "mappings": {"L": {"width": 10, "height": 20}},
+                "contact_sheet": {
+                    "width": 120,
+                    "thumb_width": 80,
+                    "cols": {"party_bg1": 2},
+                    "path": str(sheet_dir),
+                },
+            }
+        ],
+    }
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, config_data)
+    config = load_config(config_path)
+
+    result = process_group(config, group, cols_override=3)
+
+    assert result.ok
+    with Image.open(sheet_dir / f"{group}_L.webp") as image:
+        # 3 cols x 10px + 2 gaps = 32px before resize to width 120
+        assert image.width == 120

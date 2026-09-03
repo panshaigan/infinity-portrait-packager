@@ -28,7 +28,9 @@ destinations:
     contact_sheet:
       width: 1200
       thumb_width: 800
-      cols: 9
+      cols:
+        party_bg1: 9
+        party_bg2: 6
       path: "processed/contact_sheets"
 
   - id: promo_compilation

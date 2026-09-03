@@ -96,7 +96,7 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | `destinations[].contact_sheet`       | Optional; grid sheet + thumb WebPs in `path/` per category          |
 | `destinations[].contact_sheet.width` | Full sheet target width in pixels                                   |
 | `destinations[].contact_sheet.thumb_width` | Thumb sheet target width in pixels                              |
-| `destinations[].contact_sheet.cols`  | Number of portrait columns in the grid                              |
+| `destinations[].contact_sheet.cols`  | Per-group column counts (group name → columns)                        |
 | `destinations[].contact_sheet.path`  | Output folder for `{group}_{category}.webp` files                   |
 
 Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodbdimoenL.webp`).
@@ -125,9 +125,10 @@ Useful flags while iterating:
 
 ```bash
 python -m portrait_packager party_bg1 --dest promo_compilation --dry-run --verbose
+python -m portrait_packager party_bg1 --cols 12
 ```
 
-`--dry-run` shows what would be written; `--verbose` prints each source file and output name (check prefix matching there).
+`--dry-run` shows what would be written; `--verbose` prints each source file and output name (check prefix matching there). `--cols` overrides the contact sheet column count from config for the current group.
 
 ### Build the executable
 

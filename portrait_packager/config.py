@@ -24,7 +24,7 @@ class ThumbnailConfig:
 class ContactSheetConfig:
     width: int
     thumb_width: int
-    cols: int
+    cols: dict[str, int]
     path: Path
 
 
@@ -70,6 +70,30 @@ def _parse_size_mapping(data: Any, context: str) -> SizeMapping:
     return SizeMapping(width=width, height=height)
 
 
+def _parse_contact_sheet_cols(data: Any, context: str) -> dict[str, int]:
+    if not isinstance(data, dict) or not data:
+        raise ConfigError(
+            f"{context}: cols must be a non-empty object mapping group names to "
+            "column counts"
+        )
+    cols: dict[str, int] = {}
+    for group, value in data.items():
+        if not isinstance(group, str) or not group:
+            raise ConfigError(
+                f"{context}.cols: group keys must be non-empty strings"
+            )
+        try:
+            column_count = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(
+                f"{context}.cols.{group}: column count must be an integer"
+            ) from exc
+        if column_count <= 0:
+            raise ConfigError(f"{context}.cols.{group}: column count must be positive")
+        cols[group] = column_count
+    return cols
+
+
 def _parse_contact_sheet(data: Any, context: str) -> ContactSheetConfig:
     if not isinstance(data, dict):
         raise ConfigError(f"{context}: contact_sheet must be an object")
@@ -89,17 +113,15 @@ def _parse_contact_sheet(data: Any, context: str) -> ContactSheetConfig:
     try:
         width = int(data["width"])
         thumb_width = int(data["thumb_width"])
-        cols = int(data["cols"])
     except (TypeError, ValueError) as exc:
         raise ConfigError(
-            f"{context}: width, thumb_width, and cols must be integers"
+            f"{context}: width and thumb_width must be integers"
         ) from exc
     if width <= 0:
         raise ConfigError(f"{context}: width must be positive")
     if thumb_width <= 0:
         raise ConfigError(f"{context}: thumb_width must be positive")
-    if cols <= 0:
-        raise ConfigError(f"{context}: cols must be positive")
+    cols = _parse_contact_sheet_cols(data["cols"], context)
     path_raw = data["path"]
     if not isinstance(path_raw, str) or not path_raw.strip():
         raise ConfigError(f"{context}: path must be a non-empty string")

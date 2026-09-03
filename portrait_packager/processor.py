@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
-from portrait_packager.config import Config, Destination
+from portrait_packager.config import Config, ContactSheetConfig, Destination
 from portrait_packager.converter import (
     SUPPORTED_INPUT_EXTENSIONS,
     build_contact_sheet,
@@ -102,17 +102,36 @@ def _process_image(
     result.thumbs_written += 1
 
 
+def _resolve_contact_sheet_cols(
+    contact_sheet: ContactSheetConfig,
+    group: str,
+    *,
+    cols_override: int | None,
+) -> int | None:
+    if cols_override is not None:
+        return cols_override
+    return contact_sheet.cols.get(group)
+
+
 def _generate_contact_sheets(
     destination: Destination,
     group: str,
     written_by_category: dict[str, list[Path]],
     *,
-    dry_run: bool,
-    verbose: bool,
+    cols_override: int | None = None,
+    dry_run: bool = False,
+    verbose: bool = False,
     result: ProcessResult,
 ) -> None:
     contact_sheet = destination.contact_sheet
     if contact_sheet is None:
+        return
+
+    cols = _resolve_contact_sheet_cols(contact_sheet, group, cols_override=cols_override)
+    if cols is None:
+        result.errors.append(
+            f"[{destination.id}] contact_sheet.cols has no entry for group '{group}'"
+        )
         return
 
     label = f"[{destination.id}]"
@@ -132,8 +151,8 @@ def _generate_contact_sheets(
 
         if verbose or dry_run:
             print(
-                f"{label} contact sheet {category}: {len(image_paths)} images "
-                f"-> {sheet_path.name}, {thumb_path.name}"
+                f"{label} contact sheet {category}: {len(image_paths)} images, "
+                f"{cols} cols -> {sheet_path.name}, {thumb_path.name}"
             )
 
         if dry_run:
@@ -143,7 +162,7 @@ def _generate_contact_sheets(
         try:
             sheet = build_contact_sheet(
                 sorted(image_paths),
-                contact_sheet.cols,
+                cols,
             )
             sheet = resize_to_width(sheet, contact_sheet.width)
             save_image(sheet, sheet_path, "webp", destination.webp_quality)
@@ -163,6 +182,7 @@ def process_group(
     group: str,
     *,
     dest_filter: str | None = None,
+    cols_override: int | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> ProcessResult:
@@ -243,6 +263,7 @@ def process_group(
             destination,
             group,
             written_by_category,
+            cols_override=cols_override,
             dry_run=dry_run,
             verbose=verbose,
             result=result,

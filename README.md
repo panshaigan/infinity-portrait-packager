@@ -1,3 +1,9 @@
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/panshaigan/infinity-portrait-packager?color=darkred&include_prereleases&label=latest%20release)](https://github.com/panshaigan/infinity-portrait-packager/releases/latest)
+[![Github downloads (all releases)](https://img.shields.io/github/downloads/panshaigan/infinity-portrait-packager/total.svg?color=gold)](https://github.com/panshaigan/infinity-portrait-packager/releases)
+[![Platform](https://img.shields.io/static/v1?label=platform&message=Windows%20%7C%20Linux&color=informational)](https://github.com/panshaigan/infinity-portrait-packager/releases/latest)
+[![Supported games](https://img.shields.io/static/v1?label=supported%20games&message=BG%3AEE%20%7C%20BG2%3AEE%20%7C%20EET%20%7C%20IWD%3AEE%20%7C%20PST%3AEE&color=indigo)](https://github.com/panshaigan/infinity-portrait-packager)
+[![Language](https://img.shields.io/static/v1?label=language&message=English&color=limegreen)](https://github.com/panshaigan/infinity-portrait-packager)
+
 # Infinity Portrait Packager
 
 A command-line tool for preparing Baldur's Gate / Infinity Engine portrait packs. Point it at a portrait group (e.g. `party_bg1`), and it downscales and converts `M`, `L`, and `r` category images into per-group destination subfolders — with optional thumbnails — for game distribution or web promotion. Windows and Linux binaries available.

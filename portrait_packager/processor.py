@@ -8,10 +8,12 @@ from PIL import Image, UnidentifiedImageError
 from portrait_packager.config import Config, Destination
 from portrait_packager.converter import (
     SUPPORTED_INPUT_EXTENSIONS,
+    build_contact_sheet,
     lookup_prefix,
     output_name,
     resize_exact,
     resize_max_side,
+    resize_to_width,
     save_image,
 )
 
@@ -20,6 +22,7 @@ from portrait_packager.converter import (
 class ProcessResult:
     files_written: int = 0
     thumbs_written: int = 0
+    contact_sheets_written: int = 0
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     category_counts: dict[str, dict[str, int]] = field(default_factory=dict)
@@ -47,6 +50,7 @@ def _process_image(
     dry_run: bool,
     verbose: bool,
     result: ProcessResult,
+    written_by_category: dict[str, list[Path]] | None = None,
 ) -> None:
     mapping = destination.mappings[category]
     prefix = lookup_prefix(destination.prefixes, source_path.stem)
@@ -76,6 +80,9 @@ def _process_image(
 
     result.files_written += 1
 
+    if written_by_category is not None:
+        written_by_category.setdefault(category, []).append(out_path)
+
     if destination.thumbnails is None:
         return
 
@@ -93,6 +100,62 @@ def _process_image(
             return
 
     result.thumbs_written += 1
+
+
+def _generate_contact_sheets(
+    destination: Destination,
+    group: str,
+    written_by_category: dict[str, list[Path]],
+    *,
+    dry_run: bool,
+    verbose: bool,
+    result: ProcessResult,
+) -> None:
+    contact_sheet = destination.contact_sheet
+    if contact_sheet is None:
+        return
+
+    label = f"[{destination.id}]"
+    output_dir = contact_sheet.path
+
+    if not dry_run:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    for category, image_paths in sorted(written_by_category.items()):
+        if not image_paths:
+            continue
+
+        sheet_name = f"{group}_{category}.webp"
+        thumb_name = f"{group}_{category}_thumb.webp"
+        sheet_path = output_dir / sheet_name
+        thumb_path = output_dir / thumb_name
+
+        if verbose or dry_run:
+            print(
+                f"{label} contact sheet {category}: {len(image_paths)} images "
+                f"-> {sheet_path.name}, {thumb_path.name}"
+            )
+
+        if dry_run:
+            result.contact_sheets_written += 1
+            continue
+
+        try:
+            sheet = build_contact_sheet(
+                sorted(image_paths),
+                contact_sheet.cols,
+            )
+            sheet = resize_to_width(sheet, contact_sheet.width)
+            save_image(sheet, sheet_path, "webp", destination.webp_quality)
+            thumb = resize_to_width(sheet, contact_sheet.thumb_width)
+            save_image(thumb, thumb_path, "webp", destination.webp_quality)
+        except (OSError, ValueError) as exc:
+            result.errors.append(
+                f"Failed to build contact sheet for {category}: {exc}"
+            )
+            continue
+
+        result.contact_sheets_written += 1
 
 
 def process_group(
@@ -119,6 +182,7 @@ def process_group(
 
     for destination in destinations:
         dest_counts: dict[str, int] = {}
+        written_by_category: dict[str, list[Path]] = {}
         dest_dir = destination.path / group
         thumbs_dir = dest_dir / "thumbs" if destination.thumbnails else None
 
@@ -164,6 +228,7 @@ def process_group(
                     dry_run,
                     verbose,
                     result,
+                    written_by_category if destination.contact_sheet else None,
                 )
 
         if destination.thumbnails and dest_counts:
@@ -173,6 +238,15 @@ def process_group(
                     f"{label} thumbs: {thumb_total} files "
                     f"-> max {destination.thumbnails.max_size}px"
                 )
+
+        _generate_contact_sheets(
+            destination,
+            group,
+            written_by_category,
+            dry_run=dry_run,
+            verbose=verbose,
+            result=result,
+        )
 
         result.category_counts[destination.id] = dest_counts
 

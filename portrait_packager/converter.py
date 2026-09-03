@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from PIL import Image
@@ -48,3 +49,52 @@ def save_image(
         image.save(path, format="WEBP", quality=webp_quality)
     else:
         raise ValueError(f"Unsupported format: {dest_format}")
+
+
+def resize_to_width(image: Image.Image, width: int) -> Image.Image:
+    if image.width == width:
+        return image.copy()
+    ratio = width / image.width
+    new_height = max(1, round(image.height * ratio))
+    return image.resize((width, new_height), Image.Resampling.LANCZOS)
+
+
+def build_contact_sheet(
+    image_paths: list[Path],
+    cols: int,
+    *,
+    gap: int = 1,
+) -> Image.Image:
+    if not image_paths:
+        raise ValueError("image_paths must not be empty")
+    if cols <= 0:
+        raise ValueError("cols must be positive")
+
+    images: list[Image.Image] = []
+    cell_width = 0
+    cell_height = 0
+    for path in image_paths:
+        with Image.open(path) as image:
+            rgb = image.convert("RGB")
+            if cell_width == 0:
+                cell_width, cell_height = rgb.size
+            elif rgb.size != (cell_width, cell_height):
+                raise ValueError(
+                    f"Contact sheet images must share the same size; "
+                    f"expected {cell_width}x{cell_height}, got {rgb.size} in {path.name}"
+                )
+            images.append(rgb.copy())
+
+    rows = math.ceil(len(images) / cols)
+    sheet_width = cols * cell_width + (cols - 1) * gap
+    sheet_height = rows * cell_height + (rows - 1) * gap
+    sheet = Image.new("RGB", (sheet_width, sheet_height), color=(0, 0, 0))
+
+    for index, image in enumerate(images):
+        row = index // cols
+        col = index % cols
+        x = col * (cell_width + gap)
+        y = row * (cell_height + gap)
+        sheet.paste(image, (x, y))
+
+    return sheet

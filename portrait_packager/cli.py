@@ -92,6 +92,8 @@ def main(argv: list[str] | None = None) -> int:
     summary_parts = [f"{result.files_written} files written"]
     if result.thumbs_written:
         summary_parts.append(f"{result.thumbs_written} thumbs")
+    if result.contact_sheets_written:
+        summary_parts.append(f"{result.contact_sheets_written} contact sheets")
     if result.warnings:
         summary_parts.append(f"{len(result.warnings)} warnings")
     print(f"Done: {', '.join(summary_parts)}")

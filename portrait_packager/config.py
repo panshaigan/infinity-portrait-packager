@@ -21,6 +21,14 @@ class ThumbnailConfig:
 
 
 @dataclass(frozen=True)
+class ContactSheetConfig:
+    width: int
+    thumb_width: int
+    cols: int
+    path: Path
+
+
+@dataclass(frozen=True)
 class Destination:
     id: str
     path: Path
@@ -28,6 +36,7 @@ class Destination:
     mappings: dict[str, SizeMapping]
     webp_quality: int = 85
     thumbnails: ThumbnailConfig | None = None
+    contact_sheet: ContactSheetConfig | None = None
     prefixes: dict[str, str] = field(default_factory=dict)
 
 
@@ -59,6 +68,47 @@ def _parse_size_mapping(data: Any, context: str) -> SizeMapping:
     if width <= 0 or height <= 0:
         raise ConfigError(f"{context}: width and height must be positive")
     return SizeMapping(width=width, height=height)
+
+
+def _parse_contact_sheet(data: Any, context: str) -> ContactSheetConfig:
+    if not isinstance(data, dict):
+        raise ConfigError(f"{context}: contact_sheet must be an object")
+    required = {"width", "thumb_width", "cols", "path"}
+    missing = required - set(data)
+    if missing:
+        raise ConfigError(
+            f"{context}: contact_sheet missing required fields: "
+            f"{', '.join(sorted(missing))}"
+        )
+    extra_keys = set(data) - required
+    if extra_keys:
+        raise ConfigError(
+            f"{context}: contact_sheet only supports width, thumb_width, cols, "
+            f"and path, got: {', '.join(sorted(extra_keys))}"
+        )
+    try:
+        width = int(data["width"])
+        thumb_width = int(data["thumb_width"])
+        cols = int(data["cols"])
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(
+            f"{context}: width, thumb_width, and cols must be integers"
+        ) from exc
+    if width <= 0:
+        raise ConfigError(f"{context}: width must be positive")
+    if thumb_width <= 0:
+        raise ConfigError(f"{context}: thumb_width must be positive")
+    if cols <= 0:
+        raise ConfigError(f"{context}: cols must be positive")
+    path_raw = data["path"]
+    if not isinstance(path_raw, str) or not path_raw.strip():
+        raise ConfigError(f"{context}: path must be a non-empty string")
+    return ContactSheetConfig(
+        width=width,
+        thumb_width=thumb_width,
+        cols=cols,
+        path=Path(path_raw),
+    )
 
 
 def _parse_thumbnail(data: Any, context: str) -> ThumbnailConfig:
@@ -141,6 +191,13 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
     if "thumbnails" in data and data["thumbnails"] is not None:
         thumbnails = _parse_thumbnail(data["thumbnails"], f"{context}.thumbnails")
 
+    contact_sheet = None
+    if "contact_sheet" in data and data["contact_sheet"] is not None:
+        contact_sheet = _parse_contact_sheet(
+            data["contact_sheet"],
+            f"{context}.contact_sheet",
+        )
+
     prefixes = _parse_prefixes(
         data.get("prefixes"),
         context,
@@ -153,6 +210,7 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
         mappings=mappings,
         webp_quality=webp_quality,
         thumbnails=thumbnails,
+        contact_sheet=contact_sheet,
         prefixes=prefixes,
     )
 

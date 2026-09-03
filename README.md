@@ -76,6 +76,8 @@ For each destination, all categories are written into a subfolder named after th
 
 When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` with the same filename and destination format.
 
+When `contact_sheet` is configured, one WebP grid is built per processed category from the destination outputs (1px black gaps between cells), saved as `{path}/{group}_{category}.webp`, plus a downscaled `{path}/{group}_{category}_thumb.webp`.
+
 Images are resized to the exact configured width and height for each category mapping.
 
 ## Config reference
@@ -91,6 +93,11 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | `destinations[].mappings`            | Per-category exact output width/height; omit categories to skip them |
 | `destinations[].prefixes`            | Optional; maps source stem → prefix for output sort order           |
 | `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/`                      |
+| `destinations[].contact_sheet`       | Optional; grid sheet + thumb WebPs in `path/` per category          |
+| `destinations[].contact_sheet.width` | Full sheet target width in pixels                                   |
+| `destinations[].contact_sheet.thumb_width` | Thumb sheet target width in pixels                              |
+| `destinations[].contact_sheet.cols`  | Number of portrait columns in the grid                              |
+| `destinations[].contact_sheet.path`  | Output folder for `{group}_{category}.webp` files                   |
 
 Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodbdimoenL.webp`).
 
@@ -122,12 +129,42 @@ python -m portrait_packager party_bg1 --dest promo_compilation --dry-run --verbo
 
 `--dry-run` shows what would be written; `--verbose` prints each source file and output name (check prefix matching there).
 
-Build a standalone binary locally:
+### Build the executable
+
+PyInstaller is included in the dev dependencies. Install them first, then build with the module form (works even when `pyinstaller` is not on your PATH):
 
 ```bash
-pyinstaller portrait-packager.spec
-# Output: dist/ppackage.exe (Windows) or dist/ppackage (Linux)
+pip install -r requirements-dev.txt
+python -m PyInstaller portrait-packager.spec
 ```
+
+Output:
+
+- Windows: `dist/ppackage.exe`
+- Linux: `dist/ppackage`
+
+Test the built binary from the project root (place or point to a `config.yaml`):
+
+```powershell
+# Windows
+.\dist\ppackage.exe party_bg1 --config config.yaml --verbose
+```
+
+```bash
+# Linux
+chmod +x dist/ppackage
+./dist/ppackage party_bg1 --config config.yaml --verbose
+```
+
+Optional: package a release-style zip (binary + `config.yaml`), same as CI:
+
+```bash
+python -m PyInstaller portrait-packager.spec
+python scripts/package_release.py --binary-name ppackage.exe --zip-name portrait-packager-windows-x86_64.zip
+# Linux: --binary-name ppackage --zip-name portrait-packager-linux-x86_64.zip
+```
+
+The zip is written to `release-staging/`.
 
 
 

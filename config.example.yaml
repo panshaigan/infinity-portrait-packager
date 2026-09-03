@@ -25,6 +25,11 @@ destinations:
       r: { width: 420, height: 660 }
     thumbnails:
       max_size: 165
+    contact_sheet:
+      width: 1200
+      thumb_width: 800
+      cols: 9
+      path: "processed/contact_sheets"
 
   - id: promo_compilation
     path: "processed/compilation"

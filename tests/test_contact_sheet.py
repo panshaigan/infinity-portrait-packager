@@ -86,7 +86,54 @@ def test_build_contact_sheet_layout(tmp_path: Path) -> None:
     assert sheet.getpixel((10, 0)) == (0, 0, 0)
     assert sheet.getpixel((0, 0)) == colors[0]
     assert sheet.getpixel((11, 0)) == colors[1]
+    assert sheet.getpixel((4, 21)) == (0, 0, 0)
+    assert sheet.getpixel((5, 21)) == colors[2]
+    assert sheet.getpixel((15, 21)) == (0, 0, 0)
+
+
+def test_build_contact_sheet_centers_last_row(tmp_path: Path) -> None:
+    colors = (
+        (255, 0, 0),
+        (0, 255, 0),
+        (0, 0, 255),
+        (255, 255, 0),
+        (255, 0, 255),
+    )
+    paths = []
+    for index, color in enumerate(colors):
+        path = tmp_path / f"portrait{index:03d}L.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (10, 20), color=color).save(path)
+        paths.append(path)
+
+    sheet = build_contact_sheet(paths, cols=3)
+
+    assert sheet.size == (32, 41)
+    assert sheet.getpixel((0, 0)) == colors[0]
+    assert sheet.getpixel((11, 0)) == colors[1]
+    assert sheet.getpixel((22, 0)) == colors[2]
+    assert sheet.getpixel((4, 21)) == (0, 0, 0)
+    assert sheet.getpixel((5, 21)) == colors[3]
+    assert sheet.getpixel((16, 21)) == colors[4]
+    assert sheet.getpixel((26, 21)) == (0, 0, 0)
+
+
+def test_build_contact_sheet_full_rows_unchanged(tmp_path: Path) -> None:
+    colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0))
+    paths = []
+    for index, color in enumerate(colors):
+        path = tmp_path / f"portrait{index:03d}L.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (10, 20), color=color).save(path)
+        paths.append(path)
+
+    sheet = build_contact_sheet(paths, cols=2)
+
+    assert sheet.size == (21, 41)
+    assert sheet.getpixel((0, 0)) == colors[0]
+    assert sheet.getpixel((11, 0)) == colors[1]
     assert sheet.getpixel((0, 21)) == colors[2]
+    assert sheet.getpixel((11, 21)) == colors[3]
 
 
 def test_resize_to_width() -> None:

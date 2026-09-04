@@ -21,8 +21,8 @@ def build_fixture(tmp_path: Path) -> tuple[Config, str]:
     group = "party_bg1"
     group_dir = source_root / group
 
-    make_test_image(group_dir / "M" / "portrait001.png")
-    make_test_image(group_dir / "L" / "portrait001.png")
+    make_test_image(group_dir / "M" / "port001.png")
+    make_test_image(group_dir / "L" / "port001.png")
     # category r intentionally missing
 
     dest_bmp = tmp_path / "out" / "game"
@@ -72,14 +72,14 @@ def test_process_group_writes_outputs(tmp_path: Path) -> None:
     assert len(result.warnings) == 2
 
     bmp_dest = config.destinations[0].path / group
-    assert (bmp_dest / "portrait001M.bmp").is_file()
-    assert (bmp_dest / "portrait001L.bmp").is_file()
-    assert (bmp_dest / "thumbs" / "portrait001M.bmp").is_file()
-    assert (bmp_dest / "thumbs" / "portrait001L.bmp").is_file()
+    assert (bmp_dest / "PORT001M.bmp").is_file()
+    assert (bmp_dest / "PORT001L.bmp").is_file()
+    assert (bmp_dest / "thumbs" / "PORT001M.bmp").is_file()
+    assert (bmp_dest / "thumbs" / "PORT001L.bmp").is_file()
 
     webp_dest = config.destinations[1].path / group
-    assert (webp_dest / "portrait001M.webp").is_file()
-    assert (webp_dest / "portrait001L.webp").is_file()
+    assert (webp_dest / "PORT001M.webp").is_file()
+    assert (webp_dest / "PORT001L.webp").is_file()
     assert not (webp_dest / "thumbs").exists()
 
 
@@ -136,8 +136,8 @@ def test_skips_unmapped_categories(tmp_path: Path) -> None:
     assert result.ok
     assert result.files_written == 1
     dest = lonly_config.destinations[0].path / group
-    assert (dest / "portrait001L.bmp").is_file()
-    assert not (dest / "portrait001M.bmp").exists()
+    assert (dest / "PORT001L.bmp").is_file()
+    assert not (dest / "PORT001M.bmp").exists()
 
 
 def test_applies_filename_prefix(tmp_path: Path) -> None:
@@ -167,5 +167,116 @@ def test_applies_filename_prefix(tmp_path: Path) -> None:
     assert result.ok
     assert result.files_written == 2
     dest = prefix_config.destinations[0].path / group
-    assert (dest / "z_sod_bdimoenL.bmp").is_file()
-    assert (dest / "bdmainL.bmp").is_file()
+    assert (dest / "z_sod_BDIMOENL.bmp").is_file()
+    assert (dest / "BDMAINL.bmp").is_file()
+
+
+def test_normalizes_stem_case_by_category(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(source_root / group / "L" / "Nalia.png")
+    make_test_image(source_root / group / "M" / "nalia.png")
+    make_test_image(source_root / group / "r" / "NALIA.png")
+
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "game_bmp",
+                "path": str(tmp_path / "out"),
+                "format": "bmp",
+                "mappings": {
+                    "M": {"width": 210, "height": 330},
+                    "L": {"width": 420, "height": 660},
+                    "r": {"width": 84, "height": 132},
+                },
+            }
+        ],
+    }
+    write_config(tmp_path / "case.yaml", config_data)
+    config = load_config(tmp_path / "case.yaml")
+
+    result = process_group(config, group)
+
+    assert result.ok
+    assert result.files_written == 3
+    assert not any("missing from categories" in w for w in result.warnings)
+    dest = config.destinations[0].path / group
+    assert (dest / "NALIAL.bmp").is_file()
+    assert (dest / "NALIAM.bmp").is_file()
+    assert (dest / "naliar.bmp").is_file()
+
+
+def test_warns_on_long_source_stem(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(source_root / group / "L" / "toolongname.png")
+    make_test_image(source_root / group / "M" / "toolongname.png")
+    make_test_image(source_root / group / "r" / "toolongname.png")
+
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "game_bmp",
+                "path": str(tmp_path / "out"),
+                "format": "bmp",
+                "mappings": {
+                    "M": {"width": 210, "height": 330},
+                    "L": {"width": 420, "height": 660},
+                    "r": {"width": 84, "height": 132},
+                },
+            }
+        ],
+    }
+    write_config(tmp_path / "long.yaml", config_data)
+    config = load_config(tmp_path / "long.yaml")
+
+    result = process_group(config, group)
+
+    assert result.ok
+    long_warnings = [
+        w for w in result.warnings if "longer than 7 characters" in w
+    ]
+    assert len(long_warnings) == 3
+    assert any("L/toolongname.png" in w for w in long_warnings)
+
+
+def test_warns_when_stem_missing_from_category(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(source_root / group / "L" / "nalia.png")
+    make_test_image(source_root / group / "M" / "nalia.png")
+    make_test_image(source_root / group / "L" / "imoen.png")
+    make_test_image(source_root / group / "r" / "nalia.png")
+    # imoen missing from M and r
+
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "game_bmp",
+                "path": str(tmp_path / "out"),
+                "format": "bmp",
+                "mappings": {
+                    "M": {"width": 210, "height": 330},
+                    "L": {"width": 420, "height": 660},
+                    "r": {"width": 84, "height": 132},
+                },
+            }
+        ],
+    }
+    write_config(tmp_path / "missing.yaml", config_data)
+    config = load_config(tmp_path / "missing.yaml")
+
+    result = process_group(config, group)
+
+    assert result.ok
+    missing = [w for w in result.warnings if "missing from categories" in w]
+    assert len(missing) == 1
+    assert "imoen" in missing[0]
+    assert "M" in missing[0] and "r" in missing[0]
+    assert "present in: L" in missing[0]

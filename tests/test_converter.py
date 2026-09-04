@@ -12,13 +12,15 @@ from portrait_packager.converter import (
 
 
 def test_output_name() -> None:
-    assert output_name("portrait001", "L", "bmp") == "portrait001L.bmp"
-    assert output_name("portrait001", "r", "webp") == "portrait001r.webp"
+    assert output_name("portrait001", "L", "bmp") == "PORTRAIT001L.bmp"
+    assert output_name("PORTRAIT001", "r", "webp") == "portrait001r.webp"
+    assert output_name("Nalia", "M", "bmp") == "NALIAM.bmp"
+    assert output_name("Nalia", "l", "bmp") == "NALIAL.bmp"
 
 
 def test_output_name_with_prefix() -> None:
-    assert output_name("bdimoen", "L", "webp", "z_sod_") == "z_sod_bdimoenL.webp"
-    assert output_name("bdmain", "M", "bmp", "") == "bdmainM.bmp"
+    assert output_name("bdimoen", "L", "webp", "z_sod_") == "z_sod_BDIMOENL.webp"
+    assert output_name("bdmain", "M", "bmp", "") == "BDMAINM.bmp"
 
 
 def test_lookup_prefix_case_insensitive() -> None:

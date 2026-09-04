@@ -17,6 +17,8 @@ from portrait_packager.converter import (
     save_image,
 )
 
+MAX_STEM_LENGTH = 7
+
 
 @dataclass
 class ProcessResult:
@@ -39,6 +41,54 @@ def _iter_image_files(category_dir: Path) -> list[Path]:
         if path.is_file() and path.suffix.lower() in SUPPORTED_INPUT_EXTENSIONS
     ]
     return files
+
+
+def _append_warning(result: ProcessResult, warning: str) -> None:
+    result.warnings.append(warning)
+    print(f"WARN: {warning}")
+
+
+def _validate_source_filenames(
+    source_group: Path,
+    categories: list[str],
+    result: ProcessResult,
+) -> None:
+    stems_by_category: dict[str, set[str]] = {}
+    display_stem: dict[str, str] = {}
+
+    for category in categories:
+        category_dir = source_group / category
+        if not category_dir.is_dir():
+            continue
+
+        stems: set[str] = set()
+        for path in _iter_image_files(category_dir):
+            if len(path.stem) > MAX_STEM_LENGTH:
+                _append_warning(
+                    result,
+                    f"source filename stem longer than {MAX_STEM_LENGTH} characters: "
+                    f"{category}/{path.name}",
+                )
+            key = path.stem.lower()
+            stems.add(key)
+            display_stem.setdefault(key, path.stem)
+        stems_by_category[category] = stems
+
+    if len(stems_by_category) < 2:
+        return
+
+    present_categories = list(stems_by_category)
+    all_stems = set().union(*stems_by_category.values())
+    for key in sorted(all_stems):
+        missing = [cat for cat, stems in stems_by_category.items() if key not in stems]
+        if not missing:
+            continue
+        present = [cat for cat in present_categories if key in stems_by_category[cat]]
+        _append_warning(
+            result,
+            f"filename '{display_stem[key]}' missing from categories: "
+            f"{', '.join(missing)} (present in: {', '.join(present)})",
+        )
 
 
 def _process_image(
@@ -223,9 +273,10 @@ def process_group(
 
             category_dir = source_group / category
             if not category_dir.is_dir():
-                warning = f"{label} category '{category}' not found, skipping"
-                result.warnings.append(warning)
-                print(f"WARN: {warning}")
+                _append_warning(
+                    result,
+                    f"{label} category '{category}' not found, skipping",
+                )
                 continue
 
             image_files = _iter_image_files(category_dir)
@@ -270,5 +321,7 @@ def process_group(
         )
 
         result.category_counts[destination.id] = dest_counts
+
+    _validate_source_filenames(source_group, config.categories, result)
 
     return result

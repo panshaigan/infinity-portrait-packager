@@ -76,15 +76,22 @@ python -m portrait_packager party_bg1
 
 ## Output
 
-For each destination, all categories are written into a subfolder named after the portrait group (e.g. `party_bg1/`). Filenames keep the original stem with the category appended (no separator):
+For each destination, all categories are written into a subfolder named after the portrait group (e.g. `party_bg1/`). Filenames use the source stem with the category appended (no separator). Stem and category casing are normalized regardless of the source filename:
 
-- `party_bg1/L/portrait001.png` → `{dest}/party_bg1/portrait001L.bmp`
+- `L` / `M` → uppercase stem and category (`party_bg1/L/nalia.png` → `{dest}/party_bg1/NALIAL.bmp`)
+- `r` → lowercase stem and category (`party_bg1/r/NALIA.png` → `{dest}/party_bg1/naliar.bmp`)
+- Extension stays lowercase (`.bmp` / `.webp`)
 
 When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` with the same filename and destination format.
 
 When `contact_sheet` is configured, one WebP grid is built per processed category from the destination outputs (1px black gaps between cells), saved as `{path}/{group}_{category}.webp`, plus a downscaled `{path}/{group}_{category}_thumb.webp`.
 
 Images are resized to the exact configured width and height for each category mapping.
+
+After processing a group, warnings are reported when:
+
+- A source filename stem is longer than 7 characters
+- The same stem (compared case-insensitively) is not present in every existing category folder under the group
 
 ## Config reference
 
@@ -105,7 +112,7 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | `destinations[].contact_sheet.cols`  | Per-group column counts (group name → columns)                        |
 | `destinations[].contact_sheet.path`  | Output folder for `{group}_{category}.webp` files                   |
 
-Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodbdimoenL.webp`).
+Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodBDIMOENL.webp`).
 
 
 

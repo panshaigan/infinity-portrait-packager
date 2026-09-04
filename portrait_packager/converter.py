@@ -9,7 +9,18 @@ SUPPORTED_INPUT_EXTENSIONS = frozenset({".png", ".bmp", ".webp", ".jpg", ".jpeg"
 FORMAT_EXTENSIONS = {"bmp": ".bmp", "webp": ".webp"}
 
 
+def normalize_stem_for_category(stem: str, category: str) -> tuple[str, str]:
+    """Return (stem, category) with Infinity Engine casing: L/M upper, r lower."""
+    cat = category.lower()
+    if cat in ("l", "m"):
+        return stem.upper(), category.upper()
+    if cat == "r":
+        return stem.lower(), "r"
+    return stem, category
+
+
 def output_name(stem: str, category: str, dest_format: str, prefix: str = "") -> str:
+    stem, category = normalize_stem_for_category(stem, category)
     ext = FORMAT_EXTENSIONS[dest_format]
     return f"{prefix}{stem}{category}{ext}"
 

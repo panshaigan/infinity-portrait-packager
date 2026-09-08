@@ -20,6 +20,25 @@ from portrait_packager.converter import (
 MAX_STEM_LENGTH = 7
 
 
+def discover_groups(config: Config) -> list[str]:
+    """Return sorted group folder names under sources.root.
+
+    A directory counts as a portrait group only if it contains at least one
+    configured category subfolder (e.g. M, L, r).
+    """
+    root = config.sources_root
+    if not root.is_dir():
+        return []
+
+    groups: list[str] = []
+    for entry in root.iterdir():
+        if not entry.is_dir():
+            continue
+        if any((entry / category).is_dir() for category in config.categories):
+            groups.append(entry.name)
+    return sorted(groups)
+
+
 @dataclass
 class ProcessResult:
     files_written: int = 0
@@ -195,14 +214,18 @@ def _generate_contact_sheets(
             continue
 
         sheet_name = f"{group}_{category}.webp"
-        thumb_name = f"{group}_{category}_thumb.webp"
         sheet_path = output_dir / sheet_name
-        thumb_path = output_dir / thumb_name
+        thumb_path = None
+        if contact_sheet.thumb_width is not None:
+            thumb_path = output_dir / f"{group}_{category}_thumb.webp"
 
         if verbose or dry_run:
+            targets = sheet_path.name
+            if thumb_path is not None:
+                targets = f"{sheet_path.name}, {thumb_path.name}"
             print(
                 f"{label} contact sheet {category}: {len(image_paths)} images, "
-                f"{cols} cols -> {sheet_path.name}, {thumb_path.name}"
+                f"{cols} cols -> {targets}"
             )
 
         if dry_run:
@@ -216,8 +239,9 @@ def _generate_contact_sheets(
             )
             sheet = resize_to_width(sheet, contact_sheet.width)
             save_image(sheet, sheet_path, "webp", destination.webp_quality)
-            thumb = resize_to_width(sheet, contact_sheet.thumb_width)
-            save_image(thumb, thumb_path, "webp", destination.webp_quality)
+            if thumb_path is not None and contact_sheet.thumb_width is not None:
+                thumb = resize_to_width(sheet, contact_sheet.thumb_width)
+                save_image(thumb, thumb_path, "webp", destination.webp_quality)
         except (OSError, ValueError) as exc:
             result.errors.append(
                 f"Failed to build contact sheet for {category}: {exc}"

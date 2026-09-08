@@ -3,8 +3,9 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
+from portrait_packager.cli import main
 from portrait_packager.config import Config, load_config
-from portrait_packager.processor import process_group
+from portrait_packager.processor import discover_groups, process_group
 
 
 def write_config(path: Path, data: dict) -> None:
@@ -280,3 +281,87 @@ def test_warns_when_stem_missing_from_category(tmp_path: Path) -> None:
     assert "imoen" in missing[0]
     assert "M" in missing[0] and "r" in missing[0]
     assert "present in: L" in missing[0]
+
+
+def test_discover_groups_finds_category_dirs(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    make_test_image(source_root / "party_bg1" / "L" / "port001.png")
+    make_test_image(source_root / "party_bg2" / "M" / "port001.png")
+    (source_root / "processed").mkdir()
+    (source_root / "notes.txt").write_text("ignore", encoding="utf-8")
+    (source_root / "empty_dir").mkdir()
+
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "game_bmp",
+                "path": str(tmp_path / "out"),
+                "format": "bmp",
+                "mappings": {"L": {"width": 42, "height": 66}},
+            }
+        ],
+    }
+    write_config(tmp_path / "config.yaml", config_data)
+    config = load_config(tmp_path / "config.yaml")
+
+    assert discover_groups(config) == ["party_bg1", "party_bg2"]
+
+
+def test_cli_processes_all_groups_when_omitted(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    make_test_image(source_root / "party_bg1" / "L" / "port001.png")
+    make_test_image(source_root / "party_bg2" / "L" / "port002.png")
+    (source_root / "junk").mkdir()
+
+    dest = tmp_path / "out"
+    config_path = tmp_path / "config.yaml"
+    write_config(
+        config_path,
+        {
+            "sources": {"root": str(source_root)},
+            "categories": ["L"],
+            "destinations": [
+                {
+                    "id": "game_bmp",
+                    "path": str(dest),
+                    "format": "bmp",
+                    "mappings": {"L": {"width": 42, "height": 66}},
+                }
+            ],
+        },
+    )
+
+    exit_code = main(["--config", str(config_path)])
+
+    assert exit_code == 0
+    assert (dest / "party_bg1" / "PORT001L.bmp").is_file()
+    assert (dest / "party_bg2" / "PORT002L.bmp").is_file()
+
+
+def test_cli_no_groups_found(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    (source_root / "empty").mkdir()
+
+    config_path = tmp_path / "config.yaml"
+    write_config(
+        config_path,
+        {
+            "sources": {"root": str(source_root)},
+            "categories": ["L"],
+            "destinations": [
+                {
+                    "id": "game_bmp",
+                    "path": str(tmp_path / "out"),
+                    "format": "bmp",
+                    "mappings": {"L": {"width": 42, "height": 66}},
+                }
+            ],
+        },
+    )
+
+    exit_code = main(["--config", str(config_path)])
+
+    assert exit_code == 1

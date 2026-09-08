@@ -6,7 +6,7 @@ from pathlib import Path
 
 from portrait_packager import __version__
 from portrait_packager.config import ConfigError, load_config
-from portrait_packager.processor import process_group
+from portrait_packager.processor import ProcessResult, discover_groups, process_group
 
 
 def resolve_default_config() -> Path:
@@ -24,7 +24,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "group",
-        help="Portrait group folder name under sources.root (e.g. party_bg1)",
+        nargs="?",
+        default=None,
+        help=(
+            "Portrait group folder name under sources.root (e.g. party_bg1). "
+            "If omitted, process all groups found under sources.root"
+        ),
     )
     parser.add_argument(
         "--config",
@@ -61,6 +66,15 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _merge_results(total: ProcessResult, part: ProcessResult) -> None:
+    total.files_written += part.files_written
+    total.thumbs_written += part.thumbs_written
+    total.contact_sheets_written += part.contact_sheets_written
+    total.warnings.extend(part.warnings)
+    total.errors.extend(part.errors)
+    total.category_counts.update(part.category_counts)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -77,35 +91,49 @@ def main(argv: list[str] | None = None) -> int:
         print("Config error: --cols must be a positive integer", file=sys.stderr)
         return 2
 
+    if args.group is not None:
+        groups = [args.group]
+    else:
+        groups = discover_groups(config)
+        if not groups:
+            print(
+                f"ERROR: No portrait groups found under {config.sources_root}",
+                file=sys.stderr,
+            )
+            return 1
+
     mode = " (dry run)" if args.dry_run else ""
-    print(f"Processing: {args.group}{mode}")
+    total = ProcessResult()
 
-    result = process_group(
-        config,
-        args.group,
-        dest_filter=args.dest_filter,
-        cols_override=args.cols,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
-    )
+    for group in groups:
+        print(f"Processing: {group}{mode}")
+        result = process_group(
+            config,
+            group,
+            dest_filter=args.dest_filter,
+            cols_override=args.cols,
+            dry_run=args.dry_run,
+            verbose=args.verbose,
+        )
+        _merge_results(total, result)
 
-    for warning in result.warnings:
-        if not warning.startswith("WARN:"):
-            print(f"WARN: {warning}")
+        for warning in result.warnings:
+            if not warning.startswith("WARN:"):
+                print(f"WARN: {warning}")
 
-    if not result.ok:
-        for error in result.errors:
+    if not total.ok:
+        for error in total.errors:
             print(f"ERROR: {error}", file=sys.stderr)
-        if any("Portrait group not found" in error for error in result.errors):
+        if any("Portrait group not found" in error for error in total.errors):
             return 1
         return 3
 
-    summary_parts = [f"{result.files_written} files written"]
-    if result.thumbs_written:
-        summary_parts.append(f"{result.thumbs_written} thumbs")
-    if result.contact_sheets_written:
-        summary_parts.append(f"{result.contact_sheets_written} contact sheets")
-    if result.warnings:
-        summary_parts.append(f"{len(result.warnings)} warnings")
+    summary_parts = [f"{total.files_written} files written"]
+    if total.thumbs_written:
+        summary_parts.append(f"{total.thumbs_written} thumbs")
+    if total.contact_sheets_written:
+        summary_parts.append(f"{total.contact_sheets_written} contact sheets")
+    if total.warnings:
+        summary_parts.append(f"{len(total.warnings)} warnings")
     print(f"Done: {', '.join(summary_parts)}")
     return 0

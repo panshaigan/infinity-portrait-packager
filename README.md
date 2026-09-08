@@ -6,7 +6,9 @@
 
 # Infinity Portrait Packager
 
-A command-line tool for preparing Baldur's Gate / Infinity Engine portrait packs. Point it at a portrait group (e.g. `party_bg1`), and it downscales and converts `M`, `L`, and `r` category images into per-group destination subfolders — with optional thumbnails — for game distribution or web promotion. Windows and Linux binaries available.
+A small CLI for packing Baldur's Gate / Infinity Engine portraits.
+
+You keep source images in category folders (`M`, `L`, `r`). The tool resizes and converts them into the destinations you configure — for shipping in a mod, or for web previews and contact sheets. Optional per-portrait thumbnails are supported. Windows and Linux binaries are available.
 
 ## Requirements
 
@@ -52,6 +54,7 @@ sources/
 **Windows (release package):**
 
 ```powershell
+ppackage.exe
 ppackage.exe party_bg1
 ppackage.exe party_bg1 --config D:\path\config.yaml
 ppackage.exe party_bg1 --dest game_bmp --dry-run --verbose
@@ -61,6 +64,7 @@ ppackage.exe party_bg1 --dest game_bmp --dry-run --verbose
 
 ```bash
 chmod +x ppackage
+./ppackage
 ./ppackage party_bg1
 ./ppackage party_bg1 --config /path/to/config.yaml
 ```
@@ -69,9 +73,11 @@ chmod +x ppackage
 
 ```bash
 pip install -r requirements.txt
+python -m portrait_packager
 python -m portrait_packager party_bg1
 ```
 
+Pass a portrait group name (e.g. `party_bg1`) to process only that folder under `sources.root`. Omit it to process every group that has at least one category subfolder.
 
 
 ## Output
@@ -84,7 +90,7 @@ For each destination, all categories are written into a subfolder named after th
 
 When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` with the same filename and destination format.
 
-When `contact_sheet` is configured, one WebP grid is built per processed category from the destination outputs (1px black gaps between cells), saved as `{path}/{group}_{category}.webp`, plus a downscaled `{path}/{group}_{category}_thumb.webp`.
+When `contact_sheet` is configured, one WebP grid is built per processed category from the destination outputs (1px black gaps between cells), saved as `{path}/{group}_{category}.webp`. If `thumb_width` is also set, a downscaled `{path}/{group}_{category}_thumb.webp` is written too.
 
 Images are resized to the exact configured width and height for each category mapping.
 
@@ -106,9 +112,9 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | `destinations[].mappings`            | Per-category exact output width/height; omit categories to skip them |
 | `destinations[].prefixes`            | Optional; maps source stem → prefix for output sort order           |
 | `destinations[].thumbnails.max_size` | Optional; longest side for thumbs in `thumbs/`                      |
-| `destinations[].contact_sheet`       | Optional; grid sheet + thumb WebPs in `path/` per category          |
+| `destinations[].contact_sheet`       | Optional; grid sheet WebPs in `path/` per category                  |
 | `destinations[].contact_sheet.width` | Full sheet target width in pixels                                   |
-| `destinations[].contact_sheet.thumb_width` | Thumb sheet target width in pixels                              |
+| `destinations[].contact_sheet.thumb_width` | Optional; thumb sheet target width (omit to skip thumb sheets) |
 | `destinations[].contact_sheet.cols`  | Per-group column counts (group name → columns)                        |
 | `destinations[].contact_sheet.path`  | Output folder for `{group}_{category}.webp` files                   |
 
@@ -131,17 +137,19 @@ From the project root, with your config beside you or passed explicitly:
 ```bash
 pip install -r requirements.txt
 cp config.example.yaml config.yaml   # first time only; edit paths
+python -m portrait_packager --config config.yaml --verbose
 python -m portrait_packager party_bg1 --config config.yaml --verbose
 ```
 
 Useful flags while iterating:
 
 ```bash
+python -m portrait_packager --dest promo_compilation --dry-run --verbose
 python -m portrait_packager party_bg1 --dest promo_compilation --dry-run --verbose
 python -m portrait_packager party_bg1 --cols 12
 ```
 
-`--dry-run` shows what would be written; `--verbose` prints each source file and output name (check prefix matching there). `--cols` overrides the contact sheet column count from config for the current group.
+Omit the group name to process all portrait groups under `sources.root`. `--dry-run` shows what would be written; `--verbose` prints each source file and output name (check prefix matching there). `--cols` overrides the contact sheet column count from config for the current group(s).
 
 ### Build the executable
 
@@ -205,11 +213,11 @@ Release assets (one zip per platform):
 ## Exit codes
 
 
-| Code | Meaning                  |
-| ---- | ------------------------ |
-| 0    | Success                  |
-| 1    | Portrait group not found |
-| 2    | Config error             |
-| 3    | Processing error         |
+| Code | Meaning                                         |
+| ---- | ----------------------------------------------- |
+| 0    | Success                                         |
+| 1    | Portrait group not found / no groups discovered |
+| 2    | Config error                                    |
+| 3    | Processing error                                |
 
 

@@ -50,6 +50,34 @@ def test_contact_sheet_config_parsed(tmp_path: Path) -> None:
     assert sheet.path == Path("/tmp/out/sheets")
 
 
+def test_contact_sheet_config_thumb_width_optional(tmp_path: Path) -> None:
+    config_data = {
+        "sources": {"root": "/tmp/source"},
+        "categories": ["L"],
+        "destinations": [
+            {
+                "id": "web",
+                "path": "/tmp/out/web",
+                "format": "webp",
+                "mappings": {"L": {"width": 100, "height": 200}},
+                "contact_sheet": {
+                    "width": 1200,
+                    "cols": {"party_bg1": 9},
+                    "path": "/tmp/out/sheets",
+                },
+            }
+        ],
+    }
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, config_data)
+
+    config = load_config(config_path)
+    sheet = config.destinations[0].contact_sheet
+
+    assert sheet is not None
+    assert sheet.thumb_width is None
+
+
 def test_contact_sheet_config_rejects_missing_fields(tmp_path: Path) -> None:
     config_data = {
         "sources": {"root": "/tmp/source"},
@@ -198,6 +226,44 @@ def test_process_group_writes_contact_sheets(tmp_path: Path) -> None:
         assert image.width == 120
     with Image.open(thumb_m) as image:
         assert image.width == 80
+
+
+def test_process_group_contact_sheet_without_thumb(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(
+        source_root / group / "L" / "portrait001.png", (840, 1320), "green"
+    )
+
+    dest_webp = tmp_path / "out" / "web"
+    sheet_dir = tmp_path / "out" / "sheets"
+    config_data = {
+        "sources": {"root": str(source_root)},
+        "categories": ["L"],
+        "destinations": [
+            {
+                "id": "web_preview",
+                "path": str(dest_webp),
+                "format": "webp",
+                "mappings": {"L": {"width": 42, "height": 66}},
+                "contact_sheet": {
+                    "width": 120,
+                    "cols": {"party_bg1": 2},
+                    "path": str(sheet_dir),
+                },
+            }
+        ],
+    }
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, config_data)
+    config = load_config(config_path)
+
+    result = process_group(config, group)
+
+    assert result.ok
+    assert result.contact_sheets_written == 1
+    assert (sheet_dir / f"{group}_L.webp").is_file()
+    assert not (sheet_dir / f"{group}_L_thumb.webp").exists()
 
 
 def test_contact_sheet_missing_group_cols(tmp_path: Path) -> None:

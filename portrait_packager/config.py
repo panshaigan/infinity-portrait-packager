@@ -23,9 +23,9 @@ class ThumbnailConfig:
 @dataclass(frozen=True)
 class ContactSheetConfig:
     width: int
-    thumb_width: int
     cols: dict[str, int]
     path: Path
+    thumb_width: int | None = None
 
 
 @dataclass(frozen=True)
@@ -97,14 +97,15 @@ def _parse_contact_sheet_cols(data: Any, context: str) -> dict[str, int]:
 def _parse_contact_sheet(data: Any, context: str) -> ContactSheetConfig:
     if not isinstance(data, dict):
         raise ConfigError(f"{context}: contact_sheet must be an object")
-    required = {"width", "thumb_width", "cols", "path"}
+    required = {"width", "cols", "path"}
+    allowed = required | {"thumb_width"}
     missing = required - set(data)
     if missing:
         raise ConfigError(
             f"{context}: contact_sheet missing required fields: "
             f"{', '.join(sorted(missing))}"
         )
-    extra_keys = set(data) - required
+    extra_keys = set(data) - allowed
     if extra_keys:
         raise ConfigError(
             f"{context}: contact_sheet only supports width, thumb_width, cols, "
@@ -112,15 +113,22 @@ def _parse_contact_sheet(data: Any, context: str) -> ContactSheetConfig:
         )
     try:
         width = int(data["width"])
-        thumb_width = int(data["thumb_width"])
     except (TypeError, ValueError) as exc:
-        raise ConfigError(
-            f"{context}: width and thumb_width must be integers"
-        ) from exc
+        raise ConfigError(f"{context}: width must be an integer") from exc
     if width <= 0:
         raise ConfigError(f"{context}: width must be positive")
-    if thumb_width <= 0:
-        raise ConfigError(f"{context}: thumb_width must be positive")
+
+    thumb_width: int | None = None
+    if "thumb_width" in data:
+        try:
+            thumb_width = int(data["thumb_width"])
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(
+                f"{context}: thumb_width must be an integer"
+            ) from exc
+        if thumb_width <= 0:
+            raise ConfigError(f"{context}: thumb_width must be positive")
+
     cols = _parse_contact_sheet_cols(data["cols"], context)
     path_raw = data["path"]
     if not isinstance(path_raw, str) or not path_raw.strip():

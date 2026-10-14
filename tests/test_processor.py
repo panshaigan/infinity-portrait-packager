@@ -394,6 +394,7 @@ def test_source_dir_override_preserves_output_category(tmp_path: Path) -> None:
     assert result.files_written == 2
     assert result.thumbs_written == 2
     assert result.category_counts == {"game": {"M": 1, "r": 1}}
+    assert result.warnings == []
     output = tmp_path / "out" / group
     assert not (output / "IMOENM.bmp").exists()
     for name, size in [("NALIAM.bmp", (21, 33)), ("naliar.bmp", (42, 66))]:
@@ -422,3 +423,57 @@ def test_cli_discovers_custom_source_dir(tmp_path: Path) -> None:
     assert not (tmp_path / "out").exists()
     assert main(["--config", str(config_path)]) == 0
     assert (tmp_path / "out" / "party" / "LONGNAMEM.bmp").is_file()
+
+
+def test_filename_checks_use_each_selected_destination(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party"
+    make_test_image(source_root / group / "originals" / "nalia.png")
+    make_test_image(source_root / group / "M" / "unusedlongname.png")
+    make_test_image(source_root / group / "alternate" / "imoen.png")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, {
+        "sources": {"root": str(source_root)}, "categories": ["M", "L", "r"],
+        "destinations": [
+            {
+                "id": "shared", "path": str(tmp_path / "shared"), "format": "bmp",
+                "mappings": {
+                    category: {"width": 21, "height": 33, "source_dir": "originals"}
+                    for category in ["M", "L", "r"]
+                },
+            },
+            {
+                "id": "other", "path": str(tmp_path / "other"), "format": "bmp",
+                "mappings": {"L": {"width": 21, "height": 33, "source_dir": "alternate"}},
+            },
+        ],
+    })
+    config = load_config(config_path)
+    assert process_group(config, group, dry_run=True).warnings == []
+
+    make_test_image(source_root / group / "alternate" / "longname.png")
+    assert process_group(config, group, dest_filter="shared", dry_run=True).warnings == []
+    warnings = process_group(config, group, dry_run=True).warnings
+    assert len(warnings) == 1
+    assert "alternate/longname.png" in warnings[0]
+
+    make_test_image(source_root / group / "originals" / "longname.png")
+    warnings = process_group(config, group, dest_filter="shared", dry_run=True).warnings
+    assert len(warnings) == 1
+    assert "originals/longname.png" in warnings[0]
+
+
+def test_real_filename_mismatch_with_source_dir(tmp_path: Path) -> None:
+    config, group = build_fixture(tmp_path)
+    data_path = tmp_path / "config.yaml"
+    data = yaml.safe_load(data_path.read_text(encoding="utf-8"))
+    data["destinations"][0]["mappings"]["M"]["source_dir"] = "custom"
+    make_test_image(config.sources_root / group / "custom" / "nalia.png")
+    write_config(data_path, data)
+
+    result = process_group(load_config(data_path), group, dest_filter="game_bmp", dry_run=True)
+
+    mismatches = [w for w in result.warnings if "missing from categories" in w]
+    assert len(mismatches) == 2
+    assert any("'nalia' missing from categories: L (present in: M)" in w for w in mismatches)
+    assert any("'port001' missing from categories: M (present in: L)" in w for w in mismatches)

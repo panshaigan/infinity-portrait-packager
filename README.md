@@ -97,7 +97,7 @@ Images are resized to the exact configured width and height for each category ma
 After processing a group, warnings are reported when:
 
 - A source filename stem is longer than 7 characters
-- The same stem (compared case-insensitively) is not present in every existing category folder under the group
+- The same stem (compared case-insensitively) is not present in every existing source folder used by a destination's mappings. Checks use `source_dir` overrides and only selected destinations; unused folders are ignored.
 
 ## Config reference
 

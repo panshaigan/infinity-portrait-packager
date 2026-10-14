@@ -73,20 +73,23 @@ def _iter_image_files(category_dir: Path) -> list[Path]:
 
 
 def _append_warning(result: ProcessResult, warning: str) -> None:
+    if warning in result.warnings:
+        return
     result.warnings.append(warning)
     print(f"WARN: {warning}")
 
 
 def _validate_source_filenames(
     source_group: Path,
-    categories: list[str],
+    destination: Destination,
     result: ProcessResult,
 ) -> None:
     stems_by_category: dict[str, set[str]] = {}
     display_stem: dict[str, str] = {}
 
-    for category in categories:
-        category_dir = source_group / category
+    for category, mapping in destination.mappings.items():
+        source_dir = mapping.source_dir or category
+        category_dir = source_group / source_dir
         if not category_dir.is_dir():
             continue
 
@@ -96,7 +99,7 @@ def _validate_source_filenames(
                 _append_warning(
                     result,
                     f"source filename stem longer than {MAX_STEM_LENGTH} characters: "
-                    f"{category}/{path.name}",
+                    f"{source_dir}/{path.name}",
                 )
             key = path.stem.lower()
             stems.add(key)
@@ -115,7 +118,7 @@ def _validate_source_filenames(
         present = [cat for cat in present_categories if key in stems_by_category[cat]]
         _append_warning(
             result,
-            f"filename '{display_stem[key]}' missing from categories: "
+            f"[{destination.id}] filename '{display_stem[key]}' missing from categories: "
             f"{', '.join(missing)} (present in: {', '.join(present)})",
         )
 
@@ -358,7 +361,6 @@ def process_group(
         )
 
         result.category_counts[destination.id] = dest_counts
-
-    _validate_source_filenames(source_group, _source_dirs(config), result)
+        _validate_source_filenames(source_group, destination, result)
 
     return result

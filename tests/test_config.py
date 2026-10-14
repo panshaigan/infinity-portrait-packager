@@ -56,6 +56,29 @@ def test_partial_mappings_allowed(tmp_path: Path) -> None:
     assert set(config.destinations[0].mappings) == {"M", "L"}
 
 
+def test_mapping_source_dir(tmp_path: Path) -> None:
+    data = minimal_config()
+    data["destinations"][0]["mappings"]["M"]["source_dir"] = "originals"
+    path = tmp_path / "config.yaml"
+    write_config(path, data)
+
+    mappings = load_config(path).destinations[0].mappings
+
+    assert mappings["M"].source_dir == "originals"
+    assert mappings["L"].source_dir is None
+
+
+@pytest.mark.parametrize("source_dir", [None, "", "  ", 42, [], {}])
+def test_invalid_mapping_source_dir(tmp_path: Path, source_dir) -> None:
+    data = minimal_config()
+    data["destinations"][0]["mappings"]["M"]["source_dir"] = source_dir
+    path = tmp_path / "config.yaml"
+    write_config(path, data)
+
+    with pytest.raises(ConfigError, match="source_dir must be a non-empty string"):
+        load_config(path)
+
+
 def test_empty_mappings_rejected(tmp_path: Path) -> None:
     data = minimal_config()
     data["destinations"][0]["mappings"] = {}

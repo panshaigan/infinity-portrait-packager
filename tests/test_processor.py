@@ -365,3 +365,60 @@ def test_cli_no_groups_found(tmp_path: Path) -> None:
     exit_code = main(["--config", str(config_path)])
 
     assert exit_code == 1
+
+
+def test_source_dir_override_preserves_output_category(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    group = "party_bg1"
+    make_test_image(source_root / group / "originals" / "nalia.png")
+    # A different image in M ensures the override takes precedence.
+    make_test_image(source_root / group / "M" / "imoen.png")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [{
+            "id": "game", "path": str(tmp_path / "out"), "format": "bmp",
+            "mappings": {
+                "M": {"width": 21, "height": 33, "source_dir": "originals"},
+                "r": {"width": 42, "height": 66, "source_dir": "originals"},
+            },
+            "thumbnails": {"max_size": 10},
+        }],
+    })
+    config = load_config(config_path)
+
+    result = process_group(config, group)
+
+    assert result.ok
+    assert result.files_written == 2
+    assert result.thumbs_written == 2
+    assert result.category_counts == {"game": {"M": 1, "r": 1}}
+    output = tmp_path / "out" / group
+    assert not (output / "IMOENM.bmp").exists()
+    for name, size in [("NALIAM.bmp", (21, 33)), ("naliar.bmp", (42, 66))]:
+        with Image.open(output / name) as image:
+            assert image.size == size
+        assert (output / "thumbs" / name).is_file()
+
+
+def test_cli_discovers_custom_source_dir(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    make_test_image(source_root / "party" / "originals" / "longname.png")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, {
+        "sources": {"root": str(source_root)}, "categories": ["M"],
+        "destinations": [{
+            "id": "game", "path": str(tmp_path / "out"), "format": "bmp",
+            "mappings": {"M": {"width": 21, "height": 33, "source_dir": "originals"}},
+        }],
+    })
+    config = load_config(config_path)
+
+    assert discover_groups(config) == ["party"]
+    dry_result = process_group(config, "party", dry_run=True)
+    assert dry_result.files_written == 1
+    assert any("originals/longname.png" in warning for warning in dry_result.warnings)
+    assert not (tmp_path / "out").exists()
+    assert main(["--config", str(config_path)]) == 0
+    assert (tmp_path / "out" / "party" / "LONGNAMEM.bmp").is_file()

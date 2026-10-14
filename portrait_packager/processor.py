@@ -20,21 +20,31 @@ from portrait_packager.converter import (
 MAX_STEM_LENGTH = 7
 
 
+def _source_dirs(config: Config) -> list[str]:
+    return list(dict.fromkeys([
+        *config.categories,
+        *(mapping.source_dir or category
+          for destination in config.destinations
+          for category, mapping in destination.mappings.items()),
+    ]))
+
+
 def discover_groups(config: Config) -> list[str]:
     """Return sorted group folder names under sources.root.
 
     A directory counts as a portrait group only if it contains at least one
-    configured category subfolder (e.g. M, L, r).
+    configured category or mapping source subfolder (e.g. M, L, r).
     """
     root = config.sources_root
     if not root.is_dir():
         return []
 
     groups: list[str] = []
+    source_dirs = _source_dirs(config)
     for entry in root.iterdir():
         if not entry.is_dir():
             continue
-        if any((entry / category).is_dir() for category in config.categories):
+        if any((entry / source_dir).is_dir() for source_dir in source_dirs):
             groups.append(entry.name)
     return sorted(groups)
 
@@ -295,11 +305,14 @@ def process_group(
                     print(f"{label} {category}: skipped (no mapping configured)")
                 continue
 
-            category_dir = source_group / category
+            mapping = destination.mappings[category]
+            source_dir = mapping.source_dir or category
+            category_dir = source_group / source_dir
             if not category_dir.is_dir():
                 _append_warning(
                     result,
-                    f"{label} category '{category}' not found, skipping",
+                    f"{label} category '{category}' not found, skipping"
+                    + (f" (source_dir: '{source_dir}')" if source_dir != category else ""),
                 )
                 continue
 
@@ -346,6 +359,6 @@ def process_group(
 
         result.category_counts[destination.id] = dest_counts
 
-    _validate_source_filenames(source_group, config.categories, result)
+    _validate_source_filenames(source_group, _source_dirs(config), result)
 
     return result

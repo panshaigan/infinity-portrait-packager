@@ -120,6 +120,17 @@ See [config.example.yaml](config.example.yaml). Key fields:
 
 Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodBDIMOENL.webp`).
 
+Each mapping accepts an optional `source_dir`, relative to the portrait group folder. If omitted, it defaults to the mapping category (`M`, `L`, `r`, etc.). The output category, dimensions, and naming still come from the mapping:
+
+```yaml
+mappings:
+  M: { width: 210, height: 330, source_dir: L }
+  L: { width: 420, height: 660 }
+  r: { width: 420, height: 660, source_dir: originals }
+```
+
+Here, both `M` and `L` read from `<sources.root>/<group>/L`, while `r` reads from `<sources.root>/<group>/originals`. Custom source folders also count for automatic group discovery and filename checks.
+
 
 
 

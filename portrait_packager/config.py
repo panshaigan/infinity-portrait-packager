@@ -13,6 +13,7 @@ SUPPORTED_FORMATS = frozenset({"bmp", "webp"})
 class SizeMapping:
     width: int
     height: int
+    source_dir: str | None = None
 
 
 @dataclass(frozen=True)
@@ -67,7 +68,12 @@ def _parse_size_mapping(data: Any, context: str) -> SizeMapping:
         raise ConfigError(f"{context}: width and height must be integers") from exc
     if width <= 0 or height <= 0:
         raise ConfigError(f"{context}: width and height must be positive")
-    return SizeMapping(width=width, height=height)
+    source_dir = data.get("source_dir")
+    if "source_dir" in data and (
+        not isinstance(source_dir, str) or not source_dir.strip()
+    ):
+        raise ConfigError(f"{context}: source_dir must be a non-empty string")
+    return SizeMapping(width=width, height=height, source_dir=source_dir)
 
 
 def _parse_contact_sheet_cols(data: Any, context: str) -> dict[str, int]:

@@ -88,6 +88,8 @@ def _validate_source_filenames(
     display_stem: dict[str, str] = {}
 
     for category, mapping in destination.mappings.items():
+        if category == "special":
+            continue
         source_dir = mapping.source_dir or category
         category_dir = source_group / source_dir
         if not category_dir.is_dir():
@@ -135,13 +137,15 @@ def _process_image(
     written_by_category: dict[str, list[Path]] | None = None,
 ) -> None:
     mapping = destination.mappings[category]
-    prefix = lookup_prefix(destination.prefixes, source_path.stem)
+    prefix = "" if category == "special" else lookup_prefix(destination.prefixes, source_path.stem)
     out_name = output_name(source_path.stem, category, destination.format, prefix)
     out_path = dest_dir / out_name
 
     try:
         with Image.open(source_path) as image:
-            main_image = resize_exact(image, mapping.width, mapping.height)
+            main_image = resize_exact(
+                image, mapping.width, mapping.height, destination.resampling
+            )
     except (UnidentifiedImageError, OSError) as exc:
         result.errors.append(f"Failed to read {source_path}: {exc}")
         return
@@ -172,6 +176,7 @@ def _process_image(
     thumb_image = resize_max_side(
         main_image,
         destination.thumbnails.max_size,
+        destination.resampling,
     )
 
     if not dry_run:
@@ -206,7 +211,7 @@ def _generate_contact_sheets(
     result: ProcessResult,
 ) -> None:
     contact_sheet = destination.contact_sheet
-    if contact_sheet is None:
+    if contact_sheet is None or not written_by_category:
         return
 
     cols = _resolve_contact_sheet_cols(contact_sheet, group, cols_override=cols_override)
@@ -250,10 +255,12 @@ def _generate_contact_sheets(
                 sorted(image_paths),
                 cols,
             )
-            sheet = resize_to_width(sheet, contact_sheet.width)
+            sheet = resize_to_width(sheet, contact_sheet.width, destination.resampling)
             save_image(sheet, sheet_path, "webp", destination.webp_quality)
             if thumb_path is not None and contact_sheet.thumb_width is not None:
-                thumb = resize_to_width(sheet, contact_sheet.thumb_width)
+                thumb = resize_to_width(
+                    sheet, contact_sheet.thumb_width, destination.resampling
+                )
                 save_image(thumb, thumb_path, "webp", destination.webp_quality)
         except (OSError, ValueError) as exc:
             result.errors.append(
@@ -322,6 +329,16 @@ def process_group(
             image_files = _iter_image_files(category_dir)
             dest_counts[category] = len(image_files)
 
+            category_dest_dir = (
+                dest_dir.with_name(f"{dest_dir.name}_special")
+                if category == "special" else dest_dir
+            )
+            category_thumbs_dir = category_dest_dir / "thumbs" if destination.thumbnails else None
+            if not dry_run:
+                category_dest_dir.mkdir(parents=True, exist_ok=True)
+                if category_thumbs_dir is not None:
+                    category_thumbs_dir.mkdir(parents=True, exist_ok=True)
+
             if verbose or dry_run:
                 mapping = destination.mappings[category]
                 print(
@@ -334,12 +351,12 @@ def process_group(
                     source_path,
                     category,
                     destination,
-                    dest_dir,
-                    thumbs_dir,
+                    category_dest_dir,
+                    category_thumbs_dir,
                     dry_run,
                     verbose,
                     result,
-                    written_by_category if destination.contact_sheet else None,
+                    written_by_category if destination.contact_sheet and category != "special" else None,
                 )
 
         if destination.thumbnails and dest_counts:

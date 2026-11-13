@@ -84,6 +84,45 @@ def test_process_group_writes_outputs(tmp_path: Path) -> None:
     assert not (webp_dest / "thumbs").exists()
 
 
+def test_special_mapping_without_category_declaration(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    make_test_image(source_root / "female" / "special" / "Nalia.png")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, {
+        "sources": {"root": str(source_root)},
+        "categories": ["M", "L", "r"],
+        "destinations": [{
+            "id": "game",
+            "path": str(tmp_path / "out"),
+            "format": "bmp",
+            "mappings": {"special": {"width": 42, "height": 66}},
+            "prefixes": {"nalia": "ignored_"},
+            "thumbnails": {"max_size": 10},
+            "contact_sheet": {
+                "width": 120, "cols": {"other_group": 2},
+                "path": str(tmp_path / "sheets"),
+            },
+        }],
+    })
+
+    config = load_config(config_path)
+    assert config.categories == ["M", "L", "r", "special"]
+    assert discover_groups(config) == ["female"]
+
+    result = process_group(config, "female")
+    assert result.ok
+    assert result.files_written == 1
+    assert result.category_counts == {"game": {"special": 1}}
+    assert result.thumbs_written == 1
+    assert result.contact_sheets_written == 0
+    assert not (tmp_path / "sheets").exists()
+    assert (tmp_path / "out" / "female_special" / "thumbs" / "Nalia.bmp").is_file()
+    assert sorted(p.name for p in (tmp_path / "out" / "female_special").iterdir()) == ["Nalia.bmp", "thumbs"]
+    assert not (tmp_path / "out" / "female" / "Nalia.bmp").exists()
+    with Image.open(tmp_path / "out" / "female_special" / "Nalia.bmp") as image:
+        assert image.size == (42, 66)
+
+
 def test_dry_run_writes_nothing(tmp_path: Path) -> None:
     config, group = build_fixture(tmp_path)
 
@@ -477,3 +516,28 @@ def test_real_filename_mismatch_with_source_dir(tmp_path: Path) -> None:
     assert len(mismatches) == 2
     assert any("'nalia' missing from categories: L (present in: M)" in w for w in mismatches)
     assert any("'port001' missing from categories: M (present in: L)" in w for w in mismatches)
+
+
+def test_special_excluded_from_filename_validation(tmp_path: Path) -> None:
+    config, group = build_fixture(tmp_path)
+    data_path = tmp_path / "config.yaml"
+    data = yaml.safe_load(data_path.read_text(encoding="utf-8"))
+    data["destinations"][0]["mappings"]["special"] = {
+        "width": 42, "height": 66, "source_dir": "extras",
+    }
+    make_test_image(config.sources_root / group / "extras" / "very_long_special_name.png")
+    write_config(data_path, data)
+
+    result = process_group(load_config(data_path), group, dest_filter="game_bmp")
+
+    assert result.ok
+    assert result.files_written == 3
+    assert (config.destinations[0].path / f"{group}_special" / "very_long_special_name.bmp").is_file()
+    assert not any("longer than" in w or "missing from categories" in w for w in result.warnings)
+
+    # Ordinary categories still report both length and cross-category mismatches.
+    make_test_image(config.sources_root / group / "M" / "long_regular_name.png")
+    warnings = process_group(load_config(data_path), group, dest_filter="game_bmp", dry_run=True).warnings
+    assert any("M/long_regular_name.png" in w for w in warnings)
+    assert any("'long_regular_name' missing from categories: L" in w for w in warnings)
+    assert not any("special" in w or "extras" in w for w in warnings)

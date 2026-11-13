@@ -8,7 +8,7 @@
 
 A small CLI for packing Baldur's Gate / Infinity Engine portraits.
 
-You keep source images in category folders (`M`, `L`, `r`). The tool resizes and converts them into the destinations you configure — for shipping in a mod, or for web previews and contact sheets. Optional per-portrait thumbnails are supported. Windows and Linux binaries are available.
+You keep source images in category folders (`M`, `L`, `r`, `special`). The tool resizes and converts them into the destinations you configure — for shipping in a mod, or for web previews and contact sheets. Optional per-portrait thumbnails are supported. Windows and Linux binaries are available.
 
 ## Requirements
 
@@ -44,6 +44,8 @@ sources/
     L/
       portrait001.png
     r/
+      portrait001.png
+    special/
       portrait001.png
   party_bg2/
     ...
@@ -86,6 +88,7 @@ For each destination, all categories are written into a subfolder named after th
 
 - `L` / `M` → uppercase stem and category (`party_bg1/L/nalia.png` → `{dest}/party_bg1/NALIAL.bmp`)
 - `r` → lowercase stem and category (`party_bg1/r/NALIA.png` → `{dest}/party_bg1/naliar.bmp`)
+- `special` → preserves the source stem exactly, with no category suffix or configured prefix; only the extension changes to the output format (`party_bg1/special/Nalia.png` → `{dest}/party_bg1_special/Nalia.bmp`). Special images go in a sibling `{group}_special/` folder, with thumbnails in its `thumbs/` subfolder, and are excluded from contact-sheet compilations.
 - Extension stays lowercase (`.bmp` / `.webp`)
 
 When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` with the same filename and destination format.
@@ -93,11 +96,17 @@ When thumbnails are configured, they are written to `{dest}/{group}/thumbs/` wit
 When `contact_sheet` is configured, one WebP grid is built per processed category from the destination outputs (1px black gaps between cells), saved as `{path}/{group}_{category}.webp`. If `thumb_width` is also set, a downscaled `{path}/{group}_{category}_thumb.webp` is written too.
 
 Images are resized to the exact configured width and height for each category mapping.
+Bicubic resampling is the default for portraits, thumbnails, and contact sheets.
+Set `resampling: bilinear` on a destination for a softer result, or
+`resampling: lanczos` for the previous, sharper filter. Indexed and 1-bit sources
+are converted to RGB/RGBA before resizing so the selected filter actually applies.
 
 After processing a group, warnings are reported when:
 
 - A source filename stem is longer than 7 characters
 - The same stem (compared case-insensitively) is not present in every existing source folder used by a destination's mappings. Checks use `source_dir` overrides and only selected destinations; unused folders are ignored.
+
+The `special` category is excluded from both filename checks, including when it uses a `source_dir` override. Its images are still processed normally.
 
 ## Config reference
 
@@ -107,7 +116,7 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | Field                                | Description                                                         |
 | ------------------------------------ | ------------------------------------------------------------------- |
 | `sources.root`                       | Root folder containing portrait group subfolders                    |
-| `categories`                         | Category subfolder names (`M`, `L`, `r`)                            |
+| `categories`                         | Category subfolder names (`M`, `L`, `r`, `special`)                 |
 | `destinations[].format`              | Output format: `bmp` (24-bit RGB) or `webp`                         |
 | `destinations[].mappings`            | Per-category exact output width/height; omit categories to skip them |
 | `destinations[].prefixes`            | Optional; maps source stem → prefix for output sort order           |
@@ -119,6 +128,8 @@ See [config.example.yaml](config.example.yaml). Key fields:
 | `destinations[].contact_sheet.path`  | Output folder for `{group}_{category}.webp` files                   |
 
 Each destination may define mappings for only some categories — unconfigured categories are skipped. When `prefixes` is set, matching files are named `{prefix}{stem}{category}.{ext}` (e.g. `L/bdimoen.png` with prefix `sod` → `sodBDIMOENL.webp`).
+
+To use `special` in an existing config, add a `special: { width: 420, height: 660 }` mapping to each desired destination. It is automatically included in processing even if omitted from `categories`. Dimensions are configurable as for other categories.
 
 Each mapping accepts an optional `source_dir`, relative to the portrait group folder. If omitted, it defaults to the mapping category (`M`, `L`, `r`, etc.). The output category, dimensions, and naming still come from the mapping:
 

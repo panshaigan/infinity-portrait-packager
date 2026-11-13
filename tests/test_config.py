@@ -43,6 +43,26 @@ def test_load_valid_config(tmp_path: Path) -> None:
     assert config.destinations[0].id == "game_bmp"
     assert config.destinations[0].format == "bmp"
     assert config.destinations[0].mappings["L"].width == 420
+    assert config.destinations[0].resampling == "bicubic"
+
+
+@pytest.mark.parametrize("value", ["bilinear", "bicubic", "lanczos"])
+def test_resampling_config(tmp_path: Path, value: str) -> None:
+    data = minimal_config()
+    data["destinations"][0]["resampling"] = value
+    path = tmp_path / "config.yaml"
+    write_config(path, data)
+    assert load_config(path).destinations[0].resampling == value
+
+
+@pytest.mark.parametrize("value", ["nearest", "", None, [], 42])
+def test_invalid_resampling(tmp_path: Path, value: object) -> None:
+    data = minimal_config()
+    data["destinations"][0]["resampling"] = value
+    path = tmp_path / "config.yaml"
+    write_config(path, data)
+    with pytest.raises(ConfigError, match="resampling must be one of"):
+        load_config(path)
 
 
 def test_partial_mappings_allowed(tmp_path: Path) -> None:

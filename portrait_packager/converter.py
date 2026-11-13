@@ -20,6 +20,8 @@ def normalize_stem_for_category(stem: str, category: str) -> tuple[str, str]:
 
 
 def output_name(stem: str, category: str, dest_format: str, prefix: str = "") -> str:
+    if category == "special":
+        return f"{stem}{FORMAT_EXTENSIONS[dest_format]}"
     stem, category = normalize_stem_for_category(stem, category)
     ext = FORMAT_EXTENSIONS[dest_format]
     return f"{prefix}{stem}{category}{ext}"
@@ -35,15 +37,36 @@ def lookup_prefix(prefixes: dict[str, str], stem: str) -> str:
     return ""
 
 
-def resize_exact(image: Image.Image, width: int, height: int) -> Image.Image:
+RESAMPLING_FILTERS = {
+    "bilinear": Image.Resampling.BILINEAR,
+    "bicubic": Image.Resampling.BICUBIC,
+    "lanczos": Image.Resampling.LANCZOS,
+}
+
+
+def _prepare_for_resize(image: Image.Image) -> Image.Image:
+    # Pillow forces nearest-neighbor for indexed and 1-bit images.
+    if image.mode in {"1", "P", "PA"}:
+        has_alpha = image.mode == "PA" or "transparency" in image.info
+        return image.convert("RGBA" if has_alpha else "RGB")
+    return image
+
+
+def resize_exact(
+    image: Image.Image, width: int, height: int, resampling: str = "bicubic"
+) -> Image.Image:
     if image.size == (width, height):
         return image.copy()
-    return image.resize((width, height), Image.Resampling.LANCZOS)
+    return _prepare_for_resize(image).resize(
+        (width, height), RESAMPLING_FILTERS[resampling]
+    )
 
 
-def resize_max_side(image: Image.Image, max_size: int) -> Image.Image:
-    resized = image.copy()
-    resized.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+def resize_max_side(
+    image: Image.Image, max_size: int, resampling: str = "bicubic"
+) -> Image.Image:
+    resized = _prepare_for_resize(image).copy()
+    resized.thumbnail((max_size, max_size), RESAMPLING_FILTERS[resampling])
     return resized
 
 
@@ -62,12 +85,16 @@ def save_image(
         raise ValueError(f"Unsupported format: {dest_format}")
 
 
-def resize_to_width(image: Image.Image, width: int) -> Image.Image:
+def resize_to_width(
+    image: Image.Image, width: int, resampling: str = "bicubic"
+) -> Image.Image:
     if image.width == width:
         return image.copy()
     ratio = width / image.width
     new_height = max(1, round(image.height * ratio))
-    return image.resize((width, new_height), Image.Resampling.LANCZOS)
+    return _prepare_for_resize(image).resize(
+        (width, new_height), RESAMPLING_FILTERS[resampling]
+    )
 
 
 def build_contact_sheet(

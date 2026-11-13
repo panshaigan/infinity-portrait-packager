@@ -2,19 +2,22 @@
 sources:
   root: "./"
 
-categories: ["M", "L", "r"]
+categories: ["M", "L", "r", "special"]
 
 destinations:
   - id: game_bmp
     path: "processed/game_bmp"
     #path: "../dev/BG1StylePortraits/BG1StylePortraits/portraits/"
     format: bmp
+    # bicubic (default), bilinear (softer), or lanczos (sharper)
+    resampling: bicubic
     mappings:
       # Optional source_dir selects a folder under each group; defaults to the key.
       # M: { width: 210, height: 330, source_dir: L }
       M: { width: 210, height: 330 }
       L: { width: 420, height: 660 }
       r: { width: 420, height: 660 }
+      special: { width: 420, height: 660 }
 
   - id: web_preview
     path: "processed/promotion"
@@ -25,6 +28,7 @@ destinations:
       M: { width: 420, height: 660 }
       L: { width: 420, height: 660 }
       r: { width: 420, height: 660 }
+      special: { width: 420, height: 660 }
     thumbnails:
       max_size: 165
     contact_sheet:

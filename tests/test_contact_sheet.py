@@ -178,6 +178,7 @@ def test_process_group_writes_contact_sheets(tmp_path: Path) -> None:
     make_test_image(group_dir / "M" / "portrait001.png", (840, 1320), "red")
     make_test_image(group_dir / "M" / "portrait002.png", (840, 1320), "blue")
     make_test_image(group_dir / "L" / "portrait001.png", (840, 1320), "green")
+    make_test_image(group_dir / "special" / "Extra.png", (840, 1320), "blue")
 
     dest_webp = tmp_path / "out" / "web"
     sheet_dir = tmp_path / "out" / "sheets"
@@ -192,6 +193,7 @@ def test_process_group_writes_contact_sheets(tmp_path: Path) -> None:
                 "mappings": {
                     "M": {"width": 42, "height": 66},
                     "L": {"width": 42, "height": 66},
+                    "special": {"width": 42, "height": 66},
                 },
                 "contact_sheet": {
                     "width": 120,
@@ -210,6 +212,10 @@ def test_process_group_writes_contact_sheets(tmp_path: Path) -> None:
 
     assert result.ok
     assert result.contact_sheets_written == 2
+    assert (dest_webp / f"{group}_special" / "Extra.webp").is_file()
+    assert not (dest_webp / group / "Extra.webp").exists()
+    assert not (sheet_dir / f"{group}_special.webp").exists()
+    assert not (sheet_dir / f"{group}_special_thumb.webp").exists()
 
     sheet_m = sheet_dir / f"{group}_M.webp"
     thumb_m = sheet_dir / f"{group}_M_thumb.webp"

@@ -1,12 +1,14 @@
 from pathlib import Path
 
 from PIL import Image
+import pytest
 
 from portrait_packager.converter import (
     lookup_prefix,
     output_name,
     resize_exact,
     resize_max_side,
+    resize_to_width,
     save_image,
 )
 
@@ -78,3 +80,32 @@ def test_resize_max_side_behavior() -> None:
     thumb = resize_max_side(image, 105)
 
     assert thumb.size == (67, 105)
+
+
+@pytest.mark.parametrize("mode", ["1", "P"])
+@pytest.mark.parametrize("resize", [resize_exact, resize_max_side, resize_to_width])
+def test_indexed_sources_are_antialiased(mode, resize) -> None:
+    image = Image.new("RGB", (64, 64), "black")
+    image.paste("white", (32, 0, 64, 64))
+    image = image.convert(mode)
+    result = resize(image, 19, 19) if resize is resize_exact else resize(image, 19)
+    assert result.mode == "RGB"
+    assert any(0 < value < 255 for value in result.convert("RGB").tobytes())
+
+
+def test_palette_transparency_survives_resize() -> None:
+    image = Image.new("P", (64, 64))
+    image.info["transparency"] = 0
+    result = resize_exact(image, 19, 19)
+    assert result.mode == "RGBA"
+    assert result.getpixel((0, 0))[3] == 0
+
+
+def test_resampling_selection_changes_output() -> None:
+    image = Image.new("RGB", (64, 64), (40, 40, 40))
+    image.paste((210, 210, 210), (29, 0, 64, 64))
+    outputs = [
+        resize_exact(image, 19, 19, name).tobytes()
+        for name in ("bilinear", "bicubic", "lanczos")
+    ]
+    assert len(set(outputs)) == 3

@@ -7,6 +7,7 @@ from typing import Any
 import yaml
 
 SUPPORTED_FORMATS = frozenset({"bmp", "webp"})
+SUPPORTED_RESAMPLING = frozenset({"bilinear", "bicubic", "lanczos"})
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class Destination:
     thumbnails: ThumbnailConfig | None = None
     contact_sheet: ContactSheetConfig | None = None
     prefixes: dict[str, str] = field(default_factory=dict)
+    resampling: str = "bicubic"
 
 
 @dataclass(frozen=True)
@@ -223,6 +225,13 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
         if not 1 <= webp_quality <= 100:
             raise ConfigError(f"{context}: webp_quality must be between 1 and 100")
 
+    resampling = data.get("resampling", "bicubic")
+    if not isinstance(resampling, str) or resampling not in SUPPORTED_RESAMPLING:
+        raise ConfigError(
+            f"{context}: resampling must be one of: "
+            f"{', '.join(sorted(SUPPORTED_RESAMPLING))}"
+        )
+
     thumbnails = None
     if "thumbnails" in data and data["thumbnails"] is not None:
         thumbnails = _parse_thumbnail(data["thumbnails"], f"{context}.thumbnails")
@@ -248,6 +257,7 @@ def _parse_destination(data: Any, categories: list[str], index: int) -> Destinat
         thumbnails=thumbnails,
         contact_sheet=contact_sheet,
         prefixes=prefixes,
+        resampling=resampling,
     )
 
 
@@ -283,6 +293,16 @@ def load_config(path: Path) -> Config:
     destinations_raw = _require_mapping(raw, "destinations", "config")
     if not isinstance(destinations_raw, list) or not destinations_raw:
         raise ConfigError("config.destinations must be a non-empty list")
+
+    # Allow special mappings in existing configs without requiring a second
+    # declaration in categories. Include it in processing and group discovery.
+    if "special" not in categories and any(
+        isinstance(item, dict)
+        and isinstance(item.get("mappings"), dict)
+        and "special" in item["mappings"]
+        for item in destinations_raw
+    ):
+        categories.append("special")
 
     destinations = [
         _parse_destination(item, categories, index)
